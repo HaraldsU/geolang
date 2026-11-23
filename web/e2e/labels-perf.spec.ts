@@ -128,3 +128,39 @@ test('labels stay attached to countries while panning', async ({ page, isMobile 
 	await page.mouse.up();
 	await settled(page);
 });
+
+test('labels of long, even countries are centred (Latvia)', async ({ page }) => {
+	// zoom in on Latvia until its label fits
+	const lv = page.locator('path.country[data-iso="LV"]');
+	const b = (await lv.boundingBox())!;
+	await page.evaluate(({ x, y }) => {
+		const svg = document.querySelector('[data-testid="world-map"]')!;
+		for (let i = 0; i < 25; i++) {
+			svg.dispatchEvent(
+				new WheelEvent('wheel', {
+					deltaY: -100,
+					clientX: x,
+					clientY: y,
+					bubbles: true,
+					cancelable: true
+				})
+			);
+		}
+	}, centre(b));
+	await settled(page);
+	await expect(page.locator('[data-testid="labels"] .label[data-iso="LV"]')).toHaveAttribute(
+		'data-visible',
+		'true'
+	);
+	// the word's anchor (its centre) lies in the middle third of Latvia, west to east
+	const m = await page.evaluate(() => {
+		const g = document.querySelector('[data-testid="labels"] .label[data-iso="LV"]')!;
+		const [, ax] = g.getAttribute('transform')!.match(/translate\(([-\d.]+),/)!;
+		const svg = g.ownerSVGElement!.getBoundingClientRect();
+		const lv = document.querySelector('path.country[data-iso="LV"]')!.getBoundingClientRect();
+		return { x: svg.x + Number(ax), lv: lv.toJSON() };
+	});
+	const rel = (m.x - m.lv.x) / m.lv.width;
+	expect(rel).toBeGreaterThan(1 / 3);
+	expect(rel).toBeLessThan(2 / 3);
+});

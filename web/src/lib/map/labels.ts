@@ -57,6 +57,199 @@ export function projectedRings(feature: Feature<Geometry>, projection: GeoProjec
 	return rings.filter((r) => r.length >= 3);
 }
 
+/** Squared distance from a point to a segment (hot loop: no allocations, no Math.hypot). */
+function segmentDistanceSq(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+	let x = ax;
+	let y = ay;
+	const dx = bx - ax;
+	const dy = by - ay;
+	if (dx !== 0 || dy !== 0) {
+		const t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+		if (t > 1) {
+			x = bx;
+			y = by;
+		} else if (t > 0) {
+			x += dx * t;
+			y += dy * t;
+		}
+	}
+	return (px - x) * (px - x) + (py - y) * (py - y);
+}
+
+/** Distance from a point to the ring's border: positive inside, negative outside. */
+export function borderDistance(px: number, py: number, ring: Ring): number {
+	let inside = false;
+	let min = Infinity;
+	for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+		const ax = ring[i][0];
+		const ay = ring[i][1];
+		const bx = ring[j][0];
+		const by = ring[j][1];
+		if (ay > py !== by > py && px < ((bx - ax) * (py - ay)) / (by - ay) + ax) inside = !inside;
+		const d = segmentDistanceSq(px, py, ax, ay, bx, by);
+		if (d < min) min = d;
+	}
+	return (inside ? 1 : -1) * Math.sqrt(min);
+}
+
+/** Area centroid of a ring (falls back to the vertex average for degenerate rings). */
+function ringCentroid(ring: Ring): [number, number] {
+	let a = 0;
+	let cx = 0;
+	let cy = 0;
+	for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+		const f = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+		a += f;
+		cx += (ring[j][0] + ring[i][0]) * f;
+		cy += (ring[j][1] + ring[i][1]) * f;
+	}
+	if (Math.abs(a) < 1e-12) {
+		const n = ring.length;
+		return [ring.reduce((s, p) => s + p[0], 0) / n, ring.reduce((s, p) => s + p[1], 0) / n];
+	}
+	return [cx / (3 * a), cy / (3 * a)];
+}
+
+/** Minimal binary min-heap keyed by `key`. */
+class MinHeap<T> {
+	private items: T[] = [];
+	constructor(private key: (item: T) => number) {}
+	get size() {
+		return this.items.length;
+	}
+	push(item: T) {
+		const a = this.items;
+		a.push(item);
+		let i = a.length - 1;
+		while (i > 0) {
+			const parent = (i - 1) >> 1;
+			if (this.key(a[parent]) <= this.key(a[i])) break;
+			[a[parent], a[i]] = [a[i], a[parent]];
+			i = parent;
+		}
+	}
+	pop(): T | undefined {
+		const a = this.items;
+		const top = a[0];
+		const last = a.pop();
+		if (a.length && last !== undefined) {
+			a[0] = last;
+			let i = 0;
+			for (;;) {
+				const l = 2 * i + 1;
+				const r = l + 1;
+				let m = i;
+				if (l < a.length && this.key(a[l]) < this.key(a[m])) m = l;
+				if (r < a.length && this.key(a[r]) < this.key(a[m])) m = r;
+				if (m === i) break;
+				[a[m], a[i]] = [a[i], a[m]];
+				i = m;
+			}
+		}
+		return top;
+	}
+}
+
+/** Drop consecutive points closer than `tolerance` (they don't change distances noticeably). */
+function thin(ring: Ring, tolerance: number): Ring {
+	const out: Ring = [ring[0]];
+	for (let i = 1; i < ring.length; i++) {
+		const [x, y] = out[out.length - 1];
+		const dx = ring[i][0] - x;
+		const dy = ring[i][1] - y;
+		if (dx * dx + dy * dy >= tolerance * tolerance) out.push(ring[i]);
+	}
+	return out.length >= 3 ? out : ring;
+}
+
+/**
+ * Label positions must leave at least this fraction of the largest possible room (distance to
+ * the border); among those positions the one closest to the country's centre is used.
+ */
+export const PLACEMENT_MIN_FRACTION = 0.8;
+
+/**
+ * Label position for a ring: the point closest to the area centroid among all points at least
+ * `minFraction` as far from the border as the pole of inaccessibility (polylabel).
+ *
+ * The plain pole is decided by tiny width differences in long, even shapes (Latvia's sat at its
+ * eastern end); this keeps labels in a clearly wider region (Norway's south-west) but centres
+ * them when the room is about the same everywhere. Branch-and-bound over square cells, like
+ * polylabel, so large countries stay fast.
+ */
+export function centralPole(
+	ring: Ring,
+	minFraction = PLACEMENT_MIN_FRACTION,
+	precision = 0.5
+): { x: number; y: number; distance: number } {
+	// Many projected outlines have thousands of sub-pixel points; every distance check walks
+	// them all, so thin them first (moves distances by at most a quarter of `precision`).
+	ring = thin(ring, precision / 4);
+	const pole = polylabel([ring], precision) as number[] & { distance: number };
+	const threshold = pole.distance * minFraction;
+	const [cx, cy] = ringCentroid(ring);
+	const toCentre = (x: number, y: number) => Math.hypot(x - cx, y - cy);
+
+	let best = { x: pole[0], y: pole[1], distance: pole.distance };
+	let bestToCentre = toCentre(best.x, best.y);
+
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	for (const [x, y] of ring) {
+		minX = Math.min(minX, x);
+		minY = Math.min(minY, y);
+		maxX = Math.max(maxX, x);
+		maxY = Math.max(maxY, y);
+	}
+	const size = Math.min(maxX - minX, maxY - minY);
+	if (!(size > 0) || !(pole.distance > 0)) return best;
+
+	interface Cell {
+		x: number;
+		y: number;
+		/** half the cell size */
+		h: number;
+		d: number;
+		/** lower bound of the distance to the centroid for any point in the cell */
+		lb: number;
+	}
+	const cell = (x: number, y: number, h: number): Cell => ({
+		x,
+		y,
+		h,
+		d: borderDistance(x, y, ring),
+		lb: Math.max(0, toCentre(x, y) - h * Math.SQRT2)
+	});
+	const queue = new MinHeap<Cell>((c) => c.lb);
+	const h0 = size / 2;
+	for (let x = minX; x < maxX; x += size) {
+		for (let y = minY; y < maxY; y += size) queue.push(cell(x + h0, y + h0, h0));
+	}
+
+	while (queue.size) {
+		const c = queue.pop()!;
+		// nothing left can get closer to the centre by more than `precision`
+		if (c.lb >= bestToCentre - precision) break;
+		if (c.d >= threshold) {
+			const dc = toCentre(c.x, c.y);
+			if (dc < bestToCentre) {
+				best = { x: c.x, y: c.y, distance: c.d };
+				bestToCentre = dc;
+			}
+		}
+		// no point in this cell can have enough room, or cells are already fine enough
+		if (c.d + c.h * Math.SQRT2 < threshold || c.h * 2 <= precision) continue;
+		const h = c.h / 2;
+		queue.push(cell(c.x - h, c.y - h, h));
+		queue.push(cell(c.x + h, c.y - h, h));
+		queue.push(cell(c.x - h, c.y + h, h));
+		queue.push(cell(c.x + h, c.y + h, h));
+	}
+	return best;
+}
+
 export function computeAnchor(
 	iso: string,
 	feature: Feature<Geometry>,
@@ -75,8 +268,8 @@ export function computeAnchor(
 			bestArea = a;
 		}
 	}
-	const p = polylabel([best], 0.5) as number[] & { distance: number };
-	return { iso, x: p[0], y: p[1], r: p.distance, area: total };
+	const p = centralPole(best);
+	return { iso, x: p.x, y: p.y, r: p.distance, area: total };
 }
 
 /** Label font size in screen px: grows gently as you zoom in. */

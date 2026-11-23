@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { geoEqualEarth } from 'd3-geo';
 import type { Feature, Polygon } from 'geojson';
+import polylabel from 'polylabel';
 import {
+	borderDistance,
+	centralPole,
 	computeAnchor,
+	PLACEMENT_MIN_FRACTION,
 	fontSize,
 	placeDots,
 	placeLabelBoxes,
@@ -150,5 +154,80 @@ describe('placeDots', () => {
 	it('is deterministic regardless of input order', () => {
 		const xs = [anchor('AA', 500, 300, 2, 10), anchor('BB', 503, 300, 2, 10)].map((a) => item(a));
 		expect([...dotsFor(xs).dots]).toEqual([...dotsFor([...xs].reverse()).dots]);
+	});
+});
+
+describe('centralPole', () => {
+	type Ring = [number, number][];
+	// long, even band (screen coords, y down) with a slight bulge near the right end that makes
+	// the plain pole of inaccessibility jump there
+	const band: Ring = [
+		[0, 0],
+		[85, 0],
+		[90, -1.2],
+		[95, 0],
+		[100, 0],
+		[100, 10],
+		[0, 10]
+	];
+	// a big square with a long thin tail: the centroid lies in the tail, the room in the square
+	const keyhole: Ring = [
+		[0, 0],
+		[40, 0],
+		[40, 15],
+		[140, 15],
+		[140, 25],
+		[40, 25],
+		[40, 40],
+		[0, 40]
+	];
+
+	it('centres the label in a long, even shape', () => {
+		expect(polylabel([band], 0.5)[0]).toBeGreaterThan(80);
+		expect(centralPole(band).x).toBeGreaterThan(40);
+		expect(centralPole(band).x).toBeLessThan(60);
+	});
+
+	it('stays in a clearly wider region', () => {
+		const p = centralPole(keyhole);
+		expect(p.x).toBeLessThan(40);
+		expect(p.distance).toBeGreaterThanOrEqual(PLACEMENT_MIN_FRACTION * 20 - 0.5);
+	});
+
+	it('keeps enough room and reports the true distance to the border', () => {
+		for (const ring of [band, keyhole]) {
+			const p = centralPole(ring);
+			const max = (polylabel([ring], 0.5) as number[] & { distance: number }).distance;
+			expect(p.distance).toBeGreaterThan(0);
+			expect(p.distance).toBeGreaterThanOrEqual(PLACEMENT_MIN_FRACTION * max);
+			expect(p.distance).toBeCloseTo(borderDistance(p.x, p.y, ring), 6);
+		}
+	});
+
+	it('gives the same result for either ring orientation', () => {
+		const a = centralPole(keyhole);
+		const b = centralPole([...keyhole].reverse());
+		expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(0.5);
+	});
+
+	it('handles degenerate rings without throwing', () => {
+		const line: Ring = [
+			[0, 0],
+			[10, 0],
+			[20, 0]
+		];
+		expect(Number.isFinite(centralPole(line).x)).toBe(true);
+	});
+
+	it('measures border distance as negative outside the ring', () => {
+		expect(borderDistance(-5, 20, keyhole)).toBeCloseTo(-5);
+		expect(borderDistance(20, 20, keyhole)).toBeCloseTo(20);
+	});
+
+	it('does not depend on where the ring starts', () => {
+		const rotated = [...keyhole.slice(3), ...keyhole.slice(0, 3)];
+		const a = centralPole(keyhole);
+		const b = centralPole(rotated);
+		expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(0.5);
 	});
 });
