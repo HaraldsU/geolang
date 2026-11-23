@@ -10,9 +10,8 @@ function fakeData() {
 		const url = `/data/v1/${kind}/${bucket(key, n)}.json`;
 		files[url] = { ...((files[url] as object) ?? {}), [key]: value };
 	};
-	const hello = ['a1', 'hello', 'intj', 'greeting', 3];
-	add('index', 4, 'hello', [hello]);
-	add('index', 4, 'привет', [hello]);
+	add('index', 4, 'hello', [['a1', 'hello', 'intj', 'greeting', 3, ['en']]]);
+	add('index', 4, 'привет', [['a1', 'hello', 'intj', 'greeting', 3, ['ru']]]);
 	add('index', 4, 'café', [['c3', 'cafe', 'noun', 'coffee shop', 2]]);
 	add('index', 4, 'cafe', [['c3', 'cafe', 'noun', 'coffee shop', 2]]);
 	add('index', 4, 'naive', [['n1', 'naive', 'adj', 'innocent', 2]]);
@@ -38,10 +37,17 @@ describe('lookup', () => {
 	it('finds a concept by any language and loads its translations', async () => {
 		const lk = createLookup('/data', fakeFetch(fakeData()));
 		const refs = await lk.search('Привет');
-		expect(refs).toEqual([{ id: 'a1', word: 'hello', pos: 'intj', gloss: 'greeting', weight: 3 }]);
+		expect(refs).toEqual([
+			{ id: 'a1', word: 'hello', pos: 'intj', gloss: 'greeting', weight: 3, langs: ['ru'] }
+		]);
 		const c = await lk.getConcept('a1');
 		expect(c?.translations.ru).toEqual(['привет', 'privet']);
 		expect(c?.translations.fr).toEqual(['bonjour', null]);
+	});
+
+	it('treats refs from older data without languages as unlabelled', async () => {
+		const lk = createLookup('/data', fakeFetch(fakeData()));
+		expect((await lk.search('naive'))[0].langs).toEqual([]);
 	});
 
 	it('falls back to accent-folded keys', async () => {

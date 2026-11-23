@@ -17,21 +17,8 @@
 	import { buildCountryLabels, languageForms } from '#lib/data/country-labels.js';
 	import type { Countries, Languages, ScriptMode } from '#lib/data/types.js';
 	import { reportUrl } from '#lib/data/report.js';
+	import { senseLabel } from '#lib/data/sense-label.js';
 	import { registerFallbackFonts } from '#lib/fonts.js';
-
-	const POS_NAMES: Record<string, string> = {
-		noun: 'noun',
-		verb: 'verb',
-		adj: 'adjective',
-		adv: 'adverb',
-		intj: 'interjection',
-		phrase: 'phrase',
-		pron: 'pronoun',
-		prep: 'preposition',
-		num: 'numeral',
-		conj: 'conjunction',
-		name: 'name'
-	};
 
 	const lookup = createLookup('/data');
 
@@ -126,11 +113,6 @@
 		clearTimeout(debounce);
 		runSearch(query);
 		(document.activeElement as HTMLElement | null)?.blur?.(); // close the mobile keyboard
-	}
-
-	function senseLabel(r: ConceptRef) {
-		const pos = POS_NAMES[r.pos] ?? r.pos;
-		return r.gloss ? `${r.word} (${pos}): ${r.gloss}` : `${r.word} (${pos})`;
 	}
 
 	// Keep the URL shareable: ?q=hello&sense=<id>&script=native
@@ -259,11 +241,11 @@
 							onchange={(e) => chooseSense((e.currentTarget as HTMLSelectElement).value)}
 						>
 							{#each refs as r (r.id)}
-								<option value={r.id}>{senseLabel(r)}</option>
+								<option value={r.id}>{senseLabel(r, languages)}</option>
 							{/each}
 						</select>
 					{:else}
-						<span class="sense" data-testid="sense-label">{senseLabel(refs[0])}</span>
+						<span class="sense" data-testid="sense-label">{senseLabel(refs[0], languages)}</span>
 					{/if}
 				</div>
 			{/if}

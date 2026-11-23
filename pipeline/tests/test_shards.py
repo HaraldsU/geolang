@@ -85,3 +85,11 @@ def test_inflected_forms_are_indexed(tmp_path):
     shards.write_shards([c], tmp_path, "v1", 16, 8)
     for key in ["go", "went", "goes", "aller"]:
         assert [r[0] for r in load_index(tmp_path, "v1", 16, key)] == ["g1"], key
+
+
+def test_index_records_the_languages_a_key_matched_in(tmp_path):
+    shards.write_shards(sample(), tmp_path, "v1", 16, 8)
+    langs = {r[0]: r[5] for r in load_index(tmp_path, "v1", 16, "bonjour")}
+    assert langs == {"a1": ["fr"], "d4": ["fr"]}
+    assert load_index(tmp_path, "v1", 16, "hello")[0][5] == ["en"]
+    assert load_index(tmp_path, "v1", 16, "privet")[0][5] == ["ru"]  # Latin form of Russian

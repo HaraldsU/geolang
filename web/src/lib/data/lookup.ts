@@ -19,6 +19,8 @@ export interface ConceptRef {
 	pos: string;
 	gloss: string;
 	weight: number;
+	/** languages whose word matched the search ("en" for the English headword) */
+	langs: string[];
 }
 
 export interface Concept {
@@ -41,7 +43,7 @@ export class LookupError extends Error {
 }
 
 type Fetch = typeof fetch;
-type RawRef = [string, string, string, string, number];
+type RawRef = [string, string, string, string, number, string[]?];
 type RawConcept = { w: string; p: string; g: string; t: Record<string, [string, string | null]> };
 
 export const MAX_QUERY_LENGTH = 60;
@@ -89,7 +91,14 @@ export function createLookup(base = '/data', fetchImpl: Fetch = (...a) => fetch(
 		if (!m.version) throw new LookupError('Missing data manifest', 'data');
 		const data = await shard(`${base}/${m.version}/index/${bucket(key, m.indexShards)}.json`);
 		const raw = (data[key] as RawRef[] | undefined) ?? [];
-		return raw.map(([id, word, pos, gloss, weight]) => ({ id, word, pos, gloss, weight }));
+		return raw.map(([id, word, pos, gloss, weight, langs = []]) => ({
+			id,
+			word,
+			pos,
+			gloss,
+			weight,
+			langs
+		}));
 	}
 
 	/** Concepts matching a query in any language/script; exact form first, then accent-folded. */

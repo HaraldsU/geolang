@@ -1,7 +1,7 @@
 """Write concepts + search index as hash-sharded static JSON files.
 
 Layout (all under data/<version>/):
-  index/<n>.json     { key: [[conceptId, headword, pos, gloss, weight], ...] }
+  index/<n>.json     { key: [[conceptId, headword, pos, gloss, weight, [matched language codes]], ...] }
   concepts/<n>.json  { conceptId: {w, p, g, t: {lang: [native, latin|null]}} }
 and data/manifest.json pointing at the current version.
 """
@@ -33,18 +33,21 @@ class ShardStats:
     total_bytes: int = 0
 
 
-def index_keys(concept: Concept) -> set[str]:
-    words = {concept.word, *concept.forms}
-    for native, latin in concept.translations.values():
-        words.add(native)
+def index_keys(concept: Concept) -> dict[str, set[str]]:
+    """Search keys of a concept, each with the languages whose word produced it ("en" for the headword)."""
+    words: dict[str, set[str]] = defaultdict(set)
+    for w in (concept.word, *concept.forms):
+        words[w].add("en")
+    for code, (native, latin) in concept.translations.items():
+        words[native].add(code)
         if latin:
-            words.add(latin)
-    keys: set[str] = set()
-    for w in words:
+            words[latin].add(code)
+    keys: dict[str, set[str]] = defaultdict(set)
+    for w, langs in words.items():
         k = norm(w)
         if k:
-            keys.add(k)
-            keys.add(fold(k))
+            keys[k] |= langs
+            keys[fold(k)] |= langs
     return keys
 
 
@@ -83,8 +86,8 @@ def write_shards(
                 stats.concepts += 1
                 cs = bucket(c.id, concept_shards)
                 con_tmp[cs % TEMP_BUCKETS].write(f"{cs}\t{c.id}\t{_dump(c.to_json())}\n")
-                ref = _dump([c.id, c.word, c.pos, c.gloss, c.weight])
-                for key in index_keys(c):
+                for key, langs in index_keys(c).items():
+                    ref = _dump([c.id, c.word, c.pos, c.gloss, c.weight, sorted(langs)])
                     ks = bucket(key, index_shards)
                     idx_tmp[ks % TEMP_BUCKETS].write(f"{ks}\t{key}\t{ref}\n")
         finally:

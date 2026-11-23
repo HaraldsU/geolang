@@ -94,6 +94,22 @@ test('ambiguous words offer a sense picker', async ({ page }) => {
 	await expect(page).toHaveURL(/sense=/);
 });
 
+test('meanings found through another language say which language', async ({ page }) => {
+	await search(page, 'bank');
+	const options = page.getByTestId('sense-picker').locator('option');
+	await expect(options.first()).toHaveText(/^bank \(noun\): institution$/); // English: unlabelled
+
+	await search(page, 'hund');
+	await expect(options).toHaveText([
+		/^\[Danish, German \+3\] dog \(noun\): animal$/,
+		/^\[Swedish\] dog \(noun\): male canine$/,
+		/^\[German\] dog \(noun\): morally reprehensible person/
+	]);
+
+	await search(page, 'wasser');
+	await expect(options.first()).toHaveText(/^\[German\] water \(noun\)/);
+});
+
 test('search state lives in the URL and survives reload', async ({ page }) => {
 	await search(page, 'hello');
 	await expect(page).toHaveURL(/[?&]q=hello/);
