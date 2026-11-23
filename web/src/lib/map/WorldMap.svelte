@@ -35,6 +35,8 @@
 		topologyUrl?: string;
 		selected?: string | null;
 		maxZoom?: number;
+		/** countries painted with the "has a word" tint */
+		highlighted?: ReadonlySet<string> | null;
 		overlay?: Snippet<[MapContext]>;
 		onselect?: (iso: string | null) => void;
 		/** pointer (mouse) hover; never fired for touch */
@@ -45,6 +47,7 @@
 		topologyUrl = '/world/countries-50m.json',
 		selected = $bindable(null),
 		maxZoom = 40,
+		highlighted = null,
 		overlay,
 		onselect,
 		onhover
@@ -57,7 +60,7 @@
 	let hovered = $state<string | null>(null);
 	/** Data loaded, map sized and the initial view applied. */
 	let ready = $state(false);
-	let colors = $state({ ocean: '', land: '', hover: '', selected: '', stroke: '' });
+	let colors = $state({ ocean: '', land: '', word: '', hover: '', selected: '', stroke: '' });
 	let width = $state(0);
 	let height = $state(0);
 	let features = $state.raw<CountryFeature[]>([]);
@@ -134,6 +137,12 @@
 		};
 	});
 
+	const highlightPath = $derived.by(() => {
+		if (!highlighted?.size) return null;
+		const d = shapes.filter((s) => highlighted.has(s.id) && s.d).map((s) => s.d);
+		return d.length ? new Path2D(d.join('')) : null;
+	});
+
 	function draw() {
 		const c = canvas?.getContext('2d');
 		if (!c || !width || !height) return;
@@ -144,6 +153,10 @@
 		c.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
 		c.fillStyle = colors.land;
 		c.fill(paths.all);
+		if (highlightPath) {
+			c.fillStyle = colors.word;
+			c.fill(highlightPath);
+		}
 		for (const [id, color] of [
 			[hovered, colors.hover],
 			[selected, colors.selected]
@@ -169,6 +182,7 @@
 		colors = {
 			ocean: v('--ocean'),
 			land: v('--land'),
+			word: v('--land-word'),
 			hover: v('--land-hover'),
 			selected: v('--land-selected'),
 			stroke: v('--land-stroke')

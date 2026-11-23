@@ -9,6 +9,7 @@
 	--accent-text: #ffffff;
 	--ocean: #cfe0ea;
 	--land: #fbfaf6;
+	--land-word: #e2eaf8;
 	--land-hover: #ffe9a8;
 	--land-selected: #ffd166;
 	--land-stroke: #8d8a82;
@@ -34,6 +35,7 @@
 		--accent-text: #0d1117;
 		--ocean: #0f2233;
 		--land: #2b313a;
+		--land-word: #2c3a50;
 		--land-hover: #5a4a1f;
 		--land-selected: #8a6d1c;
 		--land-stroke: #5b6470;

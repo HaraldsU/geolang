@@ -52,6 +52,8 @@
 	let debounce: ReturnType<typeof setTimeout> | undefined;
 
 	const labels = $derived(buildCountryLabels(countries, languages, concept, script));
+	/** Countries that have the word (tinted on the map). */
+	const withWord = $derived(new Set([...labels.values()].filter((l) => !l.na).map((l) => l.iso)));
 
 	function panelFor(iso: string | null) {
 		if (!iso || !countries[iso]) return null;
@@ -203,6 +205,7 @@
 		<WorldMap
 			bind:this={map}
 			bind:selected
+			highlighted={withWord}
 			onhover={(iso, e) => {
 				hovered = iso;
 				if (e) hoverPos = { x: e.clientX, y: e.clientY };

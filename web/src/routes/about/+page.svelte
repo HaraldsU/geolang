@@ -11,6 +11,11 @@
 		country. Labels can be shown in Latin script (romanized) or in each language’s own script. Where
 		no translation is known, the country shows <em>N/A</em>.
 	</p>
+	<p data-testid="map-legend">
+		Countries that have the word are tinted. When a country is too small for its label at the
+		current zoom, a dot marks it instead (a hollow ring means <em>N/A</em>); zoom in or tap the
+		country to see the word.
+	</p>
 	<p>
 		All data is prepared ahead of time from open dictionaries; nothing you type leaves your browser
 		other than requests for static data files. There are no accounts and no tracking cookies.

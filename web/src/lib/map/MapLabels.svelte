@@ -1,6 +1,14 @@
 <script lang="ts">
 	import type { MapContext } from './WorldMap.svelte';
-	import { computeAnchor, fontSize, placeLabels, type Anchor, type LabelItem } from './labels.js';
+	import {
+		computeAnchor,
+		DOT_RADIUS,
+		fontSize,
+		placeDots,
+		placeLabelBoxes,
+		type Anchor,
+		type LabelItem
+	} from './labels.js';
 	import type { CountryLabel } from '#lib/data/country-labels.js';
 	import { fontStack } from '#lib/fonts.js';
 
@@ -114,9 +122,15 @@
 		return out;
 	});
 
-	const visible = $derived(
-		placeLabels(items, { k: lt.k, x: lt.x, y: lt.y }, { width: lt.width, height: lt.height })
-	);
+	const placement = $derived.by(() => {
+		const t = { k: lt.k, x: lt.x, y: lt.y };
+		const viewport = { width: lt.width, height: lt.height };
+		const { visible, boxes } = placeLabelBoxes(items, t, viewport);
+		return { visible, dots: placeDots(items, visible, boxes, t, viewport) };
+	});
+	const visible = $derived(placement.visible);
+	// Countries whose label doesn't fit at this zoom get a dot, so they don't look untranslated.
+	const dots = $derived(items.filter((it) => placement.dots.has(it.iso)));
 </script>
 
 <!--
@@ -139,6 +153,17 @@
 		style:font-size={`${px}px`}
 		aria-hidden="true"
 	>
+		{#each dots as it (it.iso)}
+			<circle
+				class="dot"
+				class:na={it.label.na}
+				cx={(it.anchor.x * lt.k + lt.x).toFixed(1)}
+				cy={(it.anchor.y * lt.k + lt.y).toFixed(1)}
+				r={DOT_RADIUS}
+				data-iso={it.iso}
+				data-testid={`dot-${it.iso}`}
+			/>
+		{/each}
 		{#each items as it (it.iso)}
 			{@const l = it.label}
 			{@const shown = visible.has(it.iso)}
@@ -228,6 +253,15 @@
 	}
 	.fallback .word {
 		font-style: italic;
+	}
+	.dot {
+		fill: var(--accent);
+		stroke: var(--label-halo);
+		stroke-width: 1.5px;
+	}
+	.dot.na {
+		fill: none;
+		stroke: var(--label-na);
 	}
 	.chip rect {
 		fill: var(--accent);

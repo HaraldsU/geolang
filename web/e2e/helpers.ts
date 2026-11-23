@@ -75,3 +75,34 @@ export async function canvasColorAt(page: Page, iso: string) {
 		return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 	}, iso);
 }
+
+/** Colour (#rrggbb) of one canvas pixel, in canvas (device) pixels. */
+export async function canvasPixel(page: Page, [x, y]: [number, number]) {
+	return page.getByTestId('map-canvas').evaluate(
+		(canvas, [x, y]) => {
+			const [r, g, b] = (canvas as HTMLCanvasElement)
+				.getContext('2d')!
+				.getImageData(x, y, 1, 1).data;
+			return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+		},
+		[x, y]
+	);
+}
+
+/**
+ * Canvas pixel at a country's label anchor (always inside the country, unlike a bounding-box
+ * centre). Requires the label to exist, i.e. a search has been made.
+ */
+export async function labelPoint(page: Page, iso: string): Promise<[number, number]> {
+	return page.evaluate((iso) => {
+		const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="map-canvas"]')!;
+		const g = document.querySelector(`[data-testid="labels"] .label[data-iso="${iso}"]`)!;
+		const [, ax, ay] = g.getAttribute('transform')!.match(/translate\(([-\d.]+),([-\d.]+)\)/)!;
+		const c = canvas.getBoundingClientRect();
+		const svg = g.ownerSVGElement!.getBoundingClientRect();
+		return [
+			Math.round((svg.x + Number(ax) - c.x) * (canvas.width / c.width)),
+			Math.round((svg.y + Number(ay) - c.y) * (canvas.height / c.height))
+		] as [number, number];
+	}, iso);
+}

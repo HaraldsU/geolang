@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { geoEqualEarth } from 'd3-geo';
 import type { Feature, Polygon } from 'geojson';
-import { computeAnchor, fontSize, placeLabels, type Anchor, type LabelItem } from './labels.js';
+import {
+	computeAnchor,
+	fontSize,
+	placeDots,
+	placeLabelBoxes,
+	placeLabels,
+	type Anchor,
+	type LabelItem
+} from './labels.js';
 
 const square = (lon: number, lat: number, size: number): Feature<Polygon> => ({
 	type: 'Feature',
@@ -101,5 +109,46 @@ describe('fontSize', () => {
 		expect(fontSize(1)).toBe(11);
 		expect(fontSize(4)).toBeGreaterThan(11);
 		expect(fontSize(1000)).toBe(17);
+	});
+});
+
+describe('placeDots', () => {
+	const dotsFor = (items: LabelItem[], t = identity) => {
+		const { visible, boxes } = placeLabelBoxes(items, t, vp);
+		return { visible, dots: placeDots(items, visible, boxes, t, vp) };
+	};
+
+	it('marks countries whose label is hidden, not those whose label is shown', () => {
+		const big = anchor('BG', 300, 300, 100);
+		const tiny = anchor('TI', 700, 300, 2);
+		const { visible, dots } = dotsFor([item(big), item(tiny)]);
+		expect(visible.has('BG')).toBe(true);
+		expect(dots.has('BG')).toBe(false);
+		expect(dots.has('TI')).toBe(true);
+	});
+
+	it('skips anchors that are off screen', () => {
+		expect(
+			dotsFor([item(anchor('OF', -20, 300, 2)), item(anchor('ED', 2, 300, 2))]).dots.size
+		).toBe(0);
+	});
+
+	it('never covers a shown label', () => {
+		const big = anchor('BG', 300, 300, 100);
+		const under = anchor('UN', 305, 300, 1); // sits inside BG's label box
+		expect(dotsFor([item(big), item(under)]).dots.has('UN')).toBe(false);
+	});
+
+	it('thins out crowded dots, keeping the larger country', () => {
+		const a = anchor('AA', 500, 300, 2, 50);
+		const b = anchor('BB', 504, 300, 2, 10);
+		const far = anchor('CC', 600, 300, 2, 5);
+		const { dots } = dotsFor([item(b), item(a), item(far)]);
+		expect([...dots].sort()).toEqual(['AA', 'CC']);
+	});
+
+	it('is deterministic regardless of input order', () => {
+		const xs = [anchor('AA', 500, 300, 2, 10), anchor('BB', 503, 300, 2, 10)].map((a) => item(a));
+		expect([...dotsFor(xs).dots]).toEqual([...dotsFor([...xs].reverse()).dots]);
 	});
 });

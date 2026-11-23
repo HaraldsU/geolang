@@ -87,26 +87,39 @@ export function fontSize(k: number): number {
 /** How much a label may overflow its country's inscribed circle before it is hidden. */
 export const FIT_FACTOR = 2.2;
 
+export interface Box {
+	x0: number;
+	y0: number;
+	x1: number;
+	y1: number;
+}
+
+/** Largest countries first (ties broken by ISO code so placement is deterministic). */
+function byImportance(items: LabelItem[]): LabelItem[] {
+	return [...items].sort((a, b) => b.anchor.area - a.anchor.area || (a.iso < b.iso ? -1 : 1));
+}
+
+function screenPoint(anchor: Anchor, t: Transform): [number, number] {
+	return [anchor.x * t.k + t.x, anchor.y * t.k + t.y];
+}
+
 /**
  * Decide which labels to show at a zoom level: a label must roughly fit inside its country,
  * be on screen, and not collide with a more important (larger) country's label.
+ * Also returns the screen boxes of the placed labels.
  */
-export function placeLabels(
+export function placeLabelBoxes(
 	items: LabelItem[],
 	t: Transform,
 	viewport: { width: number; height: number }
-): Set<string> {
+): { visible: Set<string>; boxes: Box[] } {
 	const visible = new Set<string>();
-	const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
-	const sorted = [...items].sort(
-		(a, b) => b.anchor.area - a.anchor.area || (a.iso < b.iso ? -1 : 1)
-	);
+	const boxes: Box[] = [];
 	const pad = 2;
-	for (const it of sorted) {
+	for (const it of byImportance(items)) {
 		const diameter = it.anchor.r * 2 * t.k;
 		if (it.width > diameter * FIT_FACTOR || it.height > diameter * 1.5) continue;
-		const cx = it.anchor.x * t.k + t.x;
-		const cy = it.anchor.y * t.k + t.y;
+		const [cx, cy] = screenPoint(it.anchor, t);
 		const box = {
 			x0: cx - it.width / 2 - pad,
 			x1: cx + it.width / 2 + pad,
@@ -115,11 +128,50 @@ export function placeLabels(
 		};
 		// must be fully on screen, otherwise it would be cut off at the edge
 		if (box.x0 < 0 || box.y0 < 0 || box.x1 > viewport.width || box.y1 > viewport.height) continue;
-		if (placed.some((b) => box.x0 < b.x1 && b.x0 < box.x1 && box.y0 < b.y1 && b.y0 < box.y1)) {
+		if (boxes.some((b) => box.x0 < b.x1 && b.x0 < box.x1 && box.y0 < b.y1 && b.y0 < box.y1)) {
 			continue;
 		}
-		placed.push(box);
+		boxes.push(box);
 		visible.add(it.iso);
 	}
-	return visible;
+	return { visible, boxes };
+}
+
+export function placeLabels(
+	items: LabelItem[],
+	t: Transform,
+	viewport: { width: number; height: number }
+): Set<string> {
+	return placeLabelBoxes(items, t, viewport).visible;
+}
+
+/** Radius of the marker drawn for a country whose label is hidden, in screen px. */
+export const DOT_RADIUS = 3.5;
+
+/**
+ * Countries whose label is hidden get a small dot instead, so it is clear they have a word.
+ * Dots must be on screen, must not cover a shown label, and are thinned out in crowded areas
+ * (larger countries win) so they stay at least `minGap` px apart.
+ */
+export function placeDots(
+	items: LabelItem[],
+	visible: ReadonlySet<string>,
+	boxes: readonly Box[],
+	t: Transform,
+	viewport: { width: number; height: number },
+	minGap = 7
+): Set<string> {
+	const dots = new Set<string>();
+	const kept: [number, number][] = [];
+	const r = DOT_RADIUS;
+	for (const it of byImportance(items)) {
+		if (visible.has(it.iso)) continue;
+		const [x, y] = screenPoint(it.anchor, t);
+		if (x - r < 0 || y - r < 0 || x + r > viewport.width || y + r > viewport.height) continue;
+		if (boxes.some((b) => x + r > b.x0 && x - r < b.x1 && y + r > b.y0 && y - r < b.y1)) continue;
+		if (kept.some(([kx, ky]) => (kx - x) ** 2 + (ky - y) ** 2 < minGap * minGap)) continue;
+		kept.push([x, y]);
+		dots.add(it.iso);
+	}
+	return dots;
 }
