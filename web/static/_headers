@@ -1,0 +1,24 @@
+# Cloudflare Pages response headers (also applied by `vite preview`, see vite.config.ts).
+/*
+  Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/_app/immutable/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/v*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/manifest.json
+  Cache-Control: public, max-age=300
+
+/data/countries.json
+  Cache-Control: public, max-age=86400
+
+/data/languages.json
+  Cache-Control: public, max-age=86400

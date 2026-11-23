@@ -1,0 +1,9 @@
+static/data/
+static/world/
+static/_headers
+e2e/fixtures/
+.svelte-kit/
+build/
+test-results/
+playwright-report/
+package-lock.json

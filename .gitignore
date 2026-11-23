@@ -1,0 +1,13 @@
+# Generated translation data (built by the pipeline in CI, ~300 MB)
+web/static/data/v*/
+web/static/data/manifest.json
+
+# Test output
+test-results/
+web/playwright-report/
+web/blob-report/
+
+.DS_Store
+
+# Local Claude Code settings
+.claude/settings.local.json

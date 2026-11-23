@@ -1,0 +1,82 @@
+{
+  "_comment": "Manual corrections on top of CLDR territoryInfo (official + de_facto_official, national level only).",
+  "add": {
+    "ZA": [
+      "af",
+      "nr",
+      "nso",
+      "ss",
+      "st",
+      "tn",
+      "ts",
+      "ve",
+      "xh",
+      "zu"
+    ],
+    "TF": [
+      "fr"
+    ],
+    "HM": [
+      "en"
+    ]
+  },
+  "remove": {
+    "CH": [
+      "gsw"
+    ],
+    "LI": [
+      "gsw"
+    ],
+    "NO": [
+      "no"
+    ]
+  },
+  "pseudoTerritories": {
+    "_comment": "world-atlas features without an ISO numeric id",
+    "Kosovo": {
+      "id": "XK",
+      "languages": [
+        "sq",
+        "sr"
+      ]
+    },
+    "N. Cyprus": {
+      "id": "XN",
+      "languages": [
+        "tr"
+      ]
+    },
+    "Somaliland": {
+      "id": "XS",
+      "languages": [
+        "so",
+        "ar"
+      ]
+    },
+    "Indian Ocean Ter.": {
+      "id": "XI",
+      "languages": [
+        "en"
+      ]
+    },
+    "Siachen Glacier": {
+      "id": "XG",
+      "languages": []
+    }
+  },
+  "noLanguage": [
+    "AQ",
+    "XG"
+  ],
+  "languageScript": {
+    "hak": "Hant",
+    "nan": "Hant",
+    "tzm": "Tfng",
+    "wni": "Latn",
+    "zdj": "Latn"
+  },
+  "languageName": {
+    "wni": "Comorian (Ndzwani)",
+    "zdj": "Comorian (Ngazidja)"
+  }
+}

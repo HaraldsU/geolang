@@ -1,0 +1,863 @@
+{
+ "af": {
+  "name": "Afrikaans",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "am": {
+  "name": "Amharic",
+  "script": "Ethi",
+  "dir": "ltr",
+  "font": "Noto Sans Ethiopic",
+  "latin": false
+ },
+ "ar": {
+  "name": "Arabic",
+  "script": "Arab",
+  "dir": "rtl",
+  "font": "Noto Sans Arabic",
+  "latin": false
+ },
+ "ay": {
+  "name": "Aymara",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "az": {
+  "name": "Azerbaijani",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "be": {
+  "name": "Belarusian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "bg": {
+  "name": "Bulgarian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "bi": {
+  "name": "Bislama",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "bn": {
+  "name": "Bangla",
+  "script": "Beng",
+  "dir": "ltr",
+  "font": "Noto Sans Bengali",
+  "latin": false
+ },
+ "bs": {
+  "name": "Bosnian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ca": {
+  "name": "Catalan",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ch": {
+  "name": "Chamorro",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "cs": {
+  "name": "Czech",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "da": {
+  "name": "Danish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "de": {
+  "name": "German",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "dv": {
+  "name": "Divehi",
+  "script": "Thaa",
+  "dir": "rtl",
+  "font": "Noto Sans Thaana",
+  "latin": false
+ },
+ "dz": {
+  "name": "Dzongkha",
+  "script": "Tibt",
+  "dir": "ltr",
+  "font": "Noto Serif Tibetan",
+  "latin": false
+ },
+ "el": {
+  "name": "Greek",
+  "script": "Grek",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "en": {
+  "name": "English",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "es": {
+  "name": "Spanish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "et": {
+  "name": "Estonian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "fa": {
+  "name": "Persian",
+  "script": "Arab",
+  "dir": "rtl",
+  "font": "Noto Sans Arabic",
+  "latin": false
+ },
+ "fi": {
+  "name": "Finnish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "fil": {
+  "name": "Filipino",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "fj": {
+  "name": "Fijian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "fo": {
+  "name": "Faroese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "fr": {
+  "name": "French",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ga": {
+  "name": "Irish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "gil": {
+  "name": "Gilbertese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "gn": {
+  "name": "Guarani",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "gv": {
+  "name": "Manx",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "hak": {
+  "name": "Hakka Chinese",
+  "script": "Hant",
+  "dir": "ltr",
+  "font": "Noto Sans TC",
+  "latin": false
+ },
+ "he": {
+  "name": "Hebrew",
+  "script": "Hebr",
+  "dir": "rtl",
+  "font": "Noto Sans Hebrew",
+  "latin": false
+ },
+ "hi": {
+  "name": "Hindi",
+  "script": "Deva",
+  "dir": "ltr",
+  "font": "Noto Sans Devanagari",
+  "latin": false
+ },
+ "hif": {
+  "name": "Fiji Hindi",
+  "script": "Deva",
+  "dir": "ltr",
+  "font": "Noto Sans Devanagari",
+  "latin": false
+ },
+ "ho": {
+  "name": "Hiri Motu",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "hr": {
+  "name": "Croatian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ht": {
+  "name": "Haitian Creole",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "hu": {
+  "name": "Hungarian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "hy": {
+  "name": "Armenian",
+  "script": "Armn",
+  "dir": "ltr",
+  "font": "Noto Sans Armenian",
+  "latin": false
+ },
+ "id": {
+  "name": "Indonesian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "is": {
+  "name": "Icelandic",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "it": {
+  "name": "Italian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ja": {
+  "name": "Japanese",
+  "script": "Jpan",
+  "dir": "ltr",
+  "font": "Noto Sans JP",
+  "latin": false
+ },
+ "ka": {
+  "name": "Georgian",
+  "script": "Geor",
+  "dir": "ltr",
+  "font": "Noto Sans Georgian",
+  "latin": false
+ },
+ "kk": {
+  "name": "Kazakh",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "kl": {
+  "name": "Kalaallisut",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "km": {
+  "name": "Khmer",
+  "script": "Khmr",
+  "dir": "ltr",
+  "font": "Noto Sans Khmer",
+  "latin": false
+ },
+ "ko": {
+  "name": "Korean",
+  "script": "Kore",
+  "dir": "ltr",
+  "font": "Noto Sans KR",
+  "latin": false
+ },
+ "ky": {
+  "name": "Kyrgyz",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "lb": {
+  "name": "Luxembourgish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "lo": {
+  "name": "Lao",
+  "script": "Laoo",
+  "dir": "ltr",
+  "font": "Noto Sans Lao",
+  "latin": false
+ },
+ "lt": {
+  "name": "Lithuanian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "lv": {
+  "name": "Latvian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "mg": {
+  "name": "Malagasy",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "mh": {
+  "name": "Marshallese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "mi": {
+  "name": "Māori",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "mk": {
+  "name": "Macedonian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "mn": {
+  "name": "Mongolian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "ms": {
+  "name": "Malay",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "mt": {
+  "name": "Maltese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "my": {
+  "name": "Burmese",
+  "script": "Mymr",
+  "dir": "ltr",
+  "font": "Noto Sans Myanmar",
+  "latin": false
+ },
+ "na": {
+  "name": "Nauru",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nan": {
+  "name": "Min Nan Chinese",
+  "script": "Hant",
+  "dir": "ltr",
+  "font": "Noto Sans TC",
+  "latin": false
+ },
+ "nb": {
+  "name": "Norwegian Bokmål",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nd": {
+  "name": "North Ndebele",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ne": {
+  "name": "Nepali",
+  "script": "Deva",
+  "dir": "ltr",
+  "font": "Noto Sans Devanagari",
+  "latin": false
+ },
+ "niu": {
+  "name": "Niuean",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nl": {
+  "name": "Dutch",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nn": {
+  "name": "Norwegian Nynorsk",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nr": {
+  "name": "South Ndebele",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "nso": {
+  "name": "Northern Sotho",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ny": {
+  "name": "Nyanja",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "pap": {
+  "name": "Papiamento",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "pau": {
+  "name": "Palauan",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "pl": {
+  "name": "Polish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ps": {
+  "name": "Pashto",
+  "script": "Arab",
+  "dir": "rtl",
+  "font": "Noto Sans Arabic",
+  "latin": false
+ },
+ "pt": {
+  "name": "Portuguese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "qu": {
+  "name": "Quechua",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "rn": {
+  "name": "Rundi",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ro": {
+  "name": "Romanian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ru": {
+  "name": "Russian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "rw": {
+  "name": "Kinyarwanda",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sg": {
+  "name": "Sango",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "si": {
+  "name": "Sinhala",
+  "script": "Sinh",
+  "dir": "ltr",
+  "font": "Noto Sans Sinhala",
+  "latin": false
+ },
+ "sk": {
+  "name": "Slovak",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sl": {
+  "name": "Slovenian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sm": {
+  "name": "Samoan",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sn": {
+  "name": "Shona",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "so": {
+  "name": "Somali",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sq": {
+  "name": "Albanian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sr": {
+  "name": "Serbian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "ss": {
+  "name": "Swati",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "st": {
+  "name": "Southern Sotho",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sv": {
+  "name": "Swedish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "sw": {
+  "name": "Swahili",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ta": {
+  "name": "Tamil",
+  "script": "Taml",
+  "dir": "ltr",
+  "font": "Noto Sans Tamil",
+  "latin": false
+ },
+ "tet": {
+  "name": "Tetum",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "tg": {
+  "name": "Tajik",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "th": {
+  "name": "Thai",
+  "script": "Thai",
+  "dir": "ltr",
+  "font": "Noto Sans Thai",
+  "latin": false
+ },
+ "ti": {
+  "name": "Tigrinya",
+  "script": "Ethi",
+  "dir": "ltr",
+  "font": "Noto Sans Ethiopic",
+  "latin": false
+ },
+ "tk": {
+  "name": "Turkmen",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "tn": {
+  "name": "Tswana",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "to": {
+  "name": "Tongan",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "tpi": {
+  "name": "Tok Pisin",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "tr": {
+  "name": "Turkish",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ts": {
+  "name": "Tsonga",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ty": {
+  "name": "Tahitian",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "tzm": {
+  "name": "Central Atlas Tamazight",
+  "script": "Tfng",
+  "dir": "ltr",
+  "font": "Noto Sans Tifinagh",
+  "latin": false
+ },
+ "uk": {
+  "name": "Ukrainian",
+  "script": "Cyrl",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": false
+ },
+ "ur": {
+  "name": "Urdu",
+  "script": "Arab",
+  "dir": "rtl",
+  "font": "Noto Sans Arabic",
+  "latin": false
+ },
+ "uz": {
+  "name": "Uzbek",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "ve": {
+  "name": "Venda",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "vi": {
+  "name": "Vietnamese",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "wni": {
+  "name": "Comorian (Ndzwani)",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "wo": {
+  "name": "Wolof",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "xh": {
+  "name": "Xhosa",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "yo": {
+  "name": "Yoruba",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "yue": {
+  "name": "Cantonese",
+  "script": "Hant",
+  "dir": "ltr",
+  "font": "Noto Sans TC",
+  "latin": false
+ },
+ "zdj": {
+  "name": "Comorian (Ngazidja)",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
+ "zh": {
+  "name": "Chinese",
+  "script": "Hans",
+  "dir": "ltr",
+  "font": "Noto Sans SC",
+  "latin": false
+ },
+ "zh-Hant": {
+  "name": "Traditional Chinese",
+  "script": "Hant",
+  "dir": "ltr",
+  "font": "Noto Sans TC",
+  "latin": false
+ },
+ "zu": {
+  "name": "Zulu",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ }
+}

@@ -1,0 +1,152 @@
+{
+ "_comment": "Shared test vectors: pipeline/geolang/text.py and web/src/lib/data/text.ts must agree.",
+ "vectors": [
+  {
+   "input": "hello",
+   "norm": "hello",
+   "fold": "hello",
+   "fnv1a": 1335831723,
+   "bucket1024": 171
+  },
+  {
+   "input": "Hello",
+   "norm": "hello",
+   "fold": "hello",
+   "fnv1a": 1335831723,
+   "bucket1024": 171
+  },
+  {
+   "input": "  HELLO!  ",
+   "norm": "hello",
+   "fold": "hello",
+   "fnv1a": 1335831723,
+   "bucket1024": 171
+  },
+  {
+   "input": "Bonjour",
+   "norm": "bonjour",
+   "fold": "bonjour",
+   "fnv1a": 1393828128,
+   "bucket1024": 288
+  },
+  {
+   "input": "Ça va",
+   "norm": "ça va",
+   "fold": "ca va",
+   "fnv1a": 928376571,
+   "bucket1024": 763
+  },
+  {
+   "input": "Привет",
+   "norm": "привет",
+   "fold": "привет",
+   "fnv1a": 2168984447,
+   "bucket1024": 895
+  },
+  {
+   "input": "приве́т",
+   "norm": "приве́т",
+   "fold": "привет",
+   "fnv1a": 2588531628,
+   "bucket1024": 940
+  },
+  {
+   "input": "你好",
+   "norm": "你好",
+   "fold": "你好",
+   "fnv1a": 2257816995,
+   "bucket1024": 419
+  },
+  {
+   "input": "¿Hola?",
+   "norm": "hola",
+   "fold": "hola",
+   "fnv1a": 2999341463,
+   "bucket1024": 407
+  },
+  {
+   "input": "Straße",
+   "norm": "straße",
+   "fold": "straße",
+   "fnv1a": 640088088,
+   "bucket1024": 24
+  },
+  {
+   "input": "İstanbul",
+   "norm": "i̇stanbul",
+   "fold": "istanbul",
+   "fnv1a": 1986189244,
+   "bucket1024": 956
+  },
+  {
+   "input": "naïve café",
+   "norm": "naïve café",
+   "fold": "naive cafe",
+   "fnv1a": 1954863637,
+   "bucket1024": 533
+  },
+  {
+   "input": "  multiple   spaces ",
+   "norm": "multiple spaces",
+   "fold": "multiple spaces",
+   "fnv1a": 3085413092,
+   "bucket1024": 740
+  },
+  {
+   "input": "नमस्ते",
+   "norm": "नमस्ते",
+   "fold": "नमस्ते",
+   "fnv1a": 538106393,
+   "bucket1024": 537
+  },
+  {
+   "input": "مرحبا",
+   "norm": "مرحبا",
+   "fold": "مرحبا",
+   "fnv1a": 2831450846,
+   "bucket1024": 734
+  },
+  {
+   "input": "שָׁלוֹם",
+   "norm": "שָׁלוֹם",
+   "fold": "שָׁלוֹם",
+   "fnv1a": 2332371409,
+   "bucket1024": 465
+  },
+  {
+   "input": "São Paulo",
+   "norm": "são paulo",
+   "fold": "sao paulo",
+   "fnv1a": 1547890958,
+   "bucket1024": 270
+  },
+  {
+   "input": "«quoted»",
+   "norm": "quoted",
+   "fold": "quoted",
+   "fnv1a": 3218782921,
+   "bucket1024": 713
+  },
+  {
+   "input": "ДОБРЫЙ ДЕНЬ",
+   "norm": "добрый день",
+   "fold": "добрыи день",
+   "fnv1a": 1796756815,
+   "bucket1024": 335
+  },
+  {
+   "input": "",
+   "norm": "",
+   "fold": "",
+   "fnv1a": 2166136261,
+   "bucket1024": 453
+  },
+  {
+   "input": "a",
+   "norm": "a",
+   "fold": "a",
+   "fnv1a": 3826002220,
+   "bucket1024": 300
+  }
+ ]
+}

@@ -1,0 +1,103 @@
+name: Build data & deploy
+
+# Rebuilds the translation data from the latest Wiktionary/Wikidata/CLDR and deploys the static
+# site to Cloudflare Pages. Runs monthly (kaikki.org refreshes its dumps), on pushes to main and
+# on demand. Requires repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID and the
+# variable CLOUDFLARE_PROJECT (Pages project name) and PRODUCTION_URL (e.g. https://geolang.io).
+
+on:
+  schedule:
+    - cron: '0 4 3 * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y libicu-dev pkg-config
+      - run: pip install -e '.[dev]'
+        working-directory: pipeline
+
+      - name: Month key
+        id: month
+        run: echo "key=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - name: Cache source dumps & Wikidata labels
+        uses: actions/cache@v4
+        with:
+          path: |
+            pipeline/.cache/kaikki
+            pipeline/.cache/wikidata
+            pipeline/.cache/cldr
+          key: sources-${{ steps.month.outputs.key }}
+          restore-keys: sources-
+
+      - name: Download Wiktionary dump (kaikki.org)
+        working-directory: pipeline
+        run: |
+          mkdir -p .cache/kaikki
+          # re-download when the cached copy is from a previous month
+          if [ ! -f .cache/kaikki/English.jsonl.gz ] || [ "$(date -r .cache/kaikki/English.jsonl.gz +%Y-%m)" != "$(date +%Y-%m)" ]; then
+            curl -fL --retry 3 -A "geolang-pipeline/0.1" -o .cache/kaikki/English.jsonl.gz \
+              https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz
+          fi
+
+      - name: Build data
+        working-directory: pipeline
+        env:
+          GEOLANG_CONTACT: ${{ vars.GEOLANG_CONTACT }}
+        run: |
+          python -m geolang languages
+          python -m geolang translations
+          python -m geolang coverage
+          python -m pytest -q
+
+      - name: Build site
+        working-directory: web
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web/build --project-name=${{ vars.CLOUDFLARE_PROJECT }} --branch=main
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Smoke tests against production
+        run: npx playwright test --grep @prod --project=desktop-chrome --project=pixel-7
+        env:
+          HOME: /root
+          BASE_URL: ${{ vars.PRODUCTION_URL }}
