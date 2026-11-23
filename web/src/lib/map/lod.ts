@@ -1,4 +1,4 @@
-import { geoEqualEarth, type GeoProjection } from 'd3-geo';
+import type { GeoProjection } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { presimplify, simplify } from 'topojson-simplify';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
@@ -98,11 +98,12 @@ export function covers(
 	);
 }
 
-/** Same projection, optionally clipped to a projected rectangle. */
+/** A copy of `base` (made by `create`, the same projection kind), optionally clipped to a projected rectangle. */
 export function clippedProjection(
+	create: () => GeoProjection,
 	base: GeoProjection,
 	extent: [[number, number], [number, number]] | null
 ): GeoProjection {
-	const p = geoEqualEarth().scale(base.scale()).translate(base.translate());
+	const p = create().scale(base.scale()).translate(base.translate());
 	return extent ? p.clipExtent(extent) : p;
 }

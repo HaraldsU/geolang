@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
-	import { geoEqualEarth, geoPath, type GeoProjection } from 'd3-geo';
+	import { geoPath, type GeoProjection } from 'd3-geo';
 	import { feature } from 'topojson-client';
 	import { select } from 'd3-selection';
 	import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from 'd3-zoom';
@@ -17,6 +17,7 @@
 		type CountryTopology,
 		type View
 	} from './lod.js';
+	import { DEFAULT_PROJECTION, PROJECTIONS, type ProjectionName } from './projections.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
 
@@ -37,6 +38,8 @@
 		maxZoom?: number;
 		/** countries painted with the "has a word" tint */
 		highlighted?: ReadonlySet<string> | null;
+		/** map projection; switching it resets the view */
+		projectionName?: ProjectionName;
 		overlay?: Snippet<[MapContext]>;
 		onselect?: (iso: string | null) => void;
 		/** pointer (mouse) hover; never fired for touch */
@@ -48,6 +51,7 @@
 		selected = $bindable(null),
 		maxZoom = 40,
 		highlighted = null,
+		projectionName = DEFAULT_PROJECTION,
 		overlay,
 		onselect,
 		onhover
@@ -78,8 +82,9 @@
 	const settleMs = () =>
 		(globalThis as { __geolangSettleMs?: number }).__geolangSettleMs ?? SETTLE_MS;
 
+	const createProjection = $derived(PROJECTIONS[projectionName].create);
 	const projection = $derived.by(() => {
-		const p = geoEqualEarth();
+		const p = createProjection();
 		if (!features.length || !width || !height) return p;
 		// Fit to everything except Antarctica so the inhabited world fills the screen.
 		const fitTo: FeatureCollection = {
@@ -115,7 +120,7 @@
 	});
 	const extent = $derived(renderView ? renderExtent(renderView, width, height) : null);
 	const shapes = $derived.by(() => {
-		const draw = geoPath(clippedProjection(projection, extent));
+		const draw = geoPath(clippedProjection(createProjection, projection, extent));
 		return lodFeatures.map((f) => ({ id: f.id, name: f.properties.name, d: draw(f) ?? '' }));
 	});
 
@@ -265,9 +270,15 @@
 		select(svg).transition().duration(300).call(zoomBehavior.transform, initialTransform());
 	}
 
+	// A view (zoom/pan) of one projection means nothing in another: start from the default view.
+	$effect.pre(() => {
+		void projectionName;
+		userMoved = false;
+	});
+
 	$effect(() => {
-		// Re-apply the default view when data arrives or the viewport changes, unless the user
-		// has already moved the map.
+		// Re-apply the default view when data arrives, the viewport or projection changes, unless
+		// the user has already moved the map.
 		const t = initialTransform();
 		if (zoomBehavior && !userMoved) select(svg).call(zoomBehavior.transform, t);
 	});
@@ -360,6 +371,7 @@
 		data-testid="world-map"
 		data-zoom={transform.k.toFixed(3)}
 		data-ready={ready ? 'true' : 'false'}
+		data-projection={projectionName}
 		data-lod={zoomBucket(renderView?.k ?? 1)}
 		data-clipped={extent ? 'true' : 'false'}
 	>

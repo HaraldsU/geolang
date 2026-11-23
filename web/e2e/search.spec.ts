@@ -13,9 +13,11 @@ test('typing a word labels countries in Latin script by default', async ({ page 
 	await expect.poll(() => labelText(page, 'ES')).toBe('hola');
 	await expect.poll(() => labelText(page, 'RU')).toBe('zdravstvujte');
 	await expect.poll(() => labelText(page, 'CN')).toBe('nǐ hǎo');
-	expect(
-		await page.locator('[data-testid="labels"] [data-visible="true"]').count()
-	).toBeGreaterThan(5);
+	// several countries show the word; the rest of those that have one are marked with a dot
+	const shown = await page.locator('[data-testid="labels"] [data-visible="true"]').count();
+	const dots = await page.locator('[data-testid^="dot-"]').count();
+	expect(shown).toBeGreaterThanOrEqual(5);
+	expect(shown + dots).toBeGreaterThan(50);
 });
 
 test('debounced typing searches without pressing Enter', async ({ page }) => {

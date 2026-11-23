@@ -108,6 +108,8 @@ describe('clipping to the viewport', () => {
 		expect(covers(ext, { ...view, x: view.x + 700 }, 1400, 850)).toBe(true);
 		expect(covers(ext, { k: 4, x: 700 - cx * 4, y: 425 - cy * 4 }, 1400, 850)).toBe(false);
 		const deep = simplifiedFeatures(pre, projection.scale(), 16);
-		expect(points(deep, clippedProjection(projection, ext))).toBeLessThan(points(deep) * 0.3);
+		expect(points(deep, clippedProjection(geoEqualEarth, projection, ext))).toBeLessThan(
+			points(deep) * 0.3
+		);
 	});
 });

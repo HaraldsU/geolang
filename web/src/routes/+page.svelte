@@ -5,7 +5,7 @@
 	import WorldMap from '#lib/map/WorldMap.svelte';
 	import MapLabels from '#lib/map/MapLabels.svelte';
 	import MapControls from '#lib/components/MapControls.svelte';
-	import ScriptToggle from '#lib/components/ScriptToggle.svelte';
+	import SegmentedToggle from '#lib/components/SegmentedToggle.svelte';
 	import CountryPanel from '#lib/components/CountryPanel.svelte';
 	import {
 		createLookup,
@@ -19,6 +19,12 @@
 	import { reportUrl } from '#lib/data/report.js';
 	import { senseLabel } from '#lib/data/sense-label.js';
 	import { registerFallbackFonts } from '#lib/fonts.js';
+	import {
+		DEFAULT_PROJECTION,
+		PROJECTIONS,
+		parseProjection,
+		type ProjectionName
+	} from '#lib/map/projections.js';
 
 	const lookup = createLookup('/data');
 
@@ -28,6 +34,7 @@
 	let countries = $state.raw<Countries>({});
 	let languages = $state.raw<Languages>({});
 	let script = $state<ScriptMode>('latin');
+	let projection = $state<ProjectionName>(DEFAULT_PROJECTION);
 	let query = $state('');
 	let refs = $state.raw<ConceptRef[]>([]);
 	let senseId = $state<string | null>(null);
@@ -123,6 +130,7 @@
 			params.set('sense', senseId);
 		}
 		if (script !== 'latin') params.set('script', script);
+		if (projection !== DEFAULT_PROJECTION) params.set('proj', projection);
 		const qs = params.toString();
 		return qs ? `?${qs}` : '';
 	});
@@ -146,6 +154,7 @@
 		const params = new URLSearchParams(location.search);
 		const q = (params.get('q') ?? '').slice(0, MAX_QUERY_LENGTH);
 		if (params.get('script') === 'native') script = 'native';
+		projection = parseProjection(params.get('proj'));
 		query = q;
 		ready = true;
 		if (q) runSearch(q, params.get('sense'));
@@ -198,8 +207,26 @@
 				data-testid="search-input"
 			/>
 		</form>
-		<div class="script-slot">
-			<ScriptToggle bind:value={script} />
+		<div class="toggles">
+			<SegmentedToggle
+				bind:value={script}
+				label="Writing system"
+				testid="script-toggle"
+				options={[
+					{ value: 'latin', label: 'Latin', testid: 'script-latin' },
+					{ value: 'native', label: 'Native', testid: 'script-native' }
+				]}
+			/>
+			<SegmentedToggle
+				bind:value={projection}
+				label="Map projection"
+				testid="projection-toggle"
+				options={Object.entries(PROJECTIONS).map(([value, p]) => ({
+					value: value as ProjectionName,
+					label: p.label,
+					testid: `projection-${value}`
+				}))}
+			/>
 		</div>
 	</header>
 
@@ -208,6 +235,7 @@
 			bind:this={map}
 			bind:selected
 			highlighted={withWord}
+			projectionName={projection}
 			onhover={(iso, e) => {
 				hovered = iso;
 				if (e) hoverPos = { x: e.clientX, y: e.clientY };
@@ -340,6 +368,10 @@
 		border-color: var(--accent);
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 	}
+	.toggles {
+		display: flex;
+		gap: 8px;
+	}
 	.stage {
 		position: relative;
 		flex: 1 1 auto;
@@ -433,13 +465,17 @@
 		.search input {
 			font-size: 16px; /* prevents iOS zoom-on-focus */
 		}
-		.script-slot {
+		/* phones: float over the map, bottom-left, writing system above projection */
+		.toggles {
 			position: fixed;
 			left: max(12px, env(safe-area-inset-left));
 			bottom: max(16px, env(safe-area-inset-bottom));
 			z-index: 3;
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.toggles > :global(*) {
 			box-shadow: var(--shadow);
-			border-radius: 999px;
 		}
 		.status-slot {
 			top: 8px;

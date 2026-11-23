@@ -28,10 +28,11 @@ test('map takes at least 70% of the viewport height', async ({ page }) => {
 
 test('controls are visible and do not overlap', async ({ page }) => {
 	const toggle = (await page.getByTestId('script-toggle').boundingBox())!;
+	const projection = (await page.getByTestId('projection-toggle').boundingBox())!;
 	const controls = (await page.getByTestId('map-controls').boundingBox())!;
 	const search = (await page.getByTestId('search-input').boundingBox())!;
 	const vp = page.viewportSize()!;
-	for (const b of [toggle, controls, search]) {
+	for (const b of [toggle, projection, controls, search]) {
 		expect(b.x).toBeGreaterThanOrEqual(0);
 		expect(b.x + b.width).toBeLessThanOrEqual(vp.width + 1);
 		expect(b.y + b.height).toBeLessThanOrEqual(vp.height + 1);
@@ -41,12 +42,13 @@ test('controls are visible and do not overlap', async ({ page }) => {
 	expect(overlaps(toggle, controls)).toBe(false);
 	expect(overlaps(toggle, search)).toBe(false);
 	expect(overlaps(controls, search)).toBe(false);
+	for (const other of [toggle, controls, search]) expect(overlaps(projection, other)).toBe(false);
 });
 
 test('touch targets are at least 44px on touch devices', async ({ page, hasTouch }) => {
 	test.skip(!hasTouch, 'touch-target size applies to touch devices');
 	const buttons = page.locator(
-		'[data-testid="map-controls"] button, [data-testid="script-toggle"] button'
+		'[data-testid="map-controls"] button, [data-testid="script-toggle"] button, [data-testid="projection-toggle"] button'
 	);
 	const n = await buttons.count();
 	expect(n).toBeGreaterThan(0);

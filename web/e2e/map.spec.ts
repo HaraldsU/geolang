@@ -75,9 +75,18 @@ test('clicking the ocean clears the selection', async ({ page }) => {
 	const libya = page.locator('path.country[data-iso="LY"]');
 	await libya.click();
 	await expect(libya).toHaveClass(/selected/);
-	const box = (await page.getByTestId('map-container').boundingBox())!;
-	// open sea in the South Atlantic / Indian Ocean is near the lower-left on all layouts
-	await page.locator('rect.ocean').click({ position: { x: 5, y: box.height * 0.45 } });
+	// find open sea (depends on the projection and layout): a point where the ocean is on top
+	const sea = await page.locator('rect.ocean').evaluate((ocean) => {
+		const r = ocean.getBoundingClientRect();
+		for (let y = r.top + r.height * 0.3; y < r.bottom - 10; y += 10) {
+			for (let x = r.left + 10; x < r.right - 10; x += 10) {
+				if (document.elementFromPoint(x, y) === ocean) return { x: x - r.left, y: y - r.top };
+			}
+		}
+		return null;
+	});
+	expect(sea).not.toBeNull();
+	await page.locator('rect.ocean').click({ position: sea! });
 	await expect(page.locator('path.country.selected')).toHaveCount(0);
 });
 
