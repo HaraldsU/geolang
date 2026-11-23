@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoReady } from './helpers';
+import { gotoReady, isMobile } from './helpers';
 
 test.beforeEach(async ({ page }) => {
 	await gotoReady(page);
@@ -77,4 +77,17 @@ test('layout reflows on rotation', async ({ page }, testInfo) => {
 
 test('layout snapshot', async ({ page }) => {
 	await expect(page).toHaveScreenshot('layout.png');
+});
+
+test('search box is centred in the navbar', async ({ page }, testInfo) => {
+	test.skip(isMobile(testInfo.project.name), 'phones put the search beside the logo');
+	// the device's own width, plus both sides of the breakpoint where the toggles leave the navbar
+	for (const width of [page.viewportSize()!.width, 768, 1099, 1100]) {
+		await page.setViewportSize({ width, height: page.viewportSize()!.height });
+		const search = (await page.getByTestId('search-input').boundingBox())!;
+		const nav = (await page.getByTestId('navbar').boundingBox())!;
+		const offCentre = search.x + search.width / 2 - (nav.x + nav.width / 2);
+		expect(Math.abs(offCentre), `at ${width}px`).toBeLessThanOrEqual(1);
+		expect(search.width, `at ${width}px`).toBeGreaterThanOrEqual(240);
+	}
 });

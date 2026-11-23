@@ -35,6 +35,7 @@
 	let languages = $state.raw<Languages>({});
 	let script = $state<ScriptMode>('latin');
 	let projection = $state<ProjectionName>(DEFAULT_PROJECTION);
+	let togglesWidth = $state(0); // keeps the search centred: both sides of the navbar get this width
 	let query = $state('');
 	let refs = $state.raw<ConceptRef[]>([]);
 	let senseId = $state<string | null>(null);
@@ -199,7 +200,11 @@
 </svelte:head>
 
 <div class="app" bind:this={app}>
-	<header class="nav" data-testid="navbar">
+	<header
+		class="nav"
+		data-testid="navbar"
+		style:--side={togglesWidth ? `${togglesWidth}px` : undefined}
+	>
 		<a class="brand" href="/" aria-label="geolang home">geo<span>lang</span></a>
 		<form class="search" role="search" onsubmit={onSubmit}>
 			<label for="q" class="visually-hidden">Word to translate</label>
@@ -217,7 +222,7 @@
 				data-testid="search-input"
 			/>
 		</form>
-		<div class="toggles">
+		<div class="toggles" bind:clientWidth={togglesWidth}>
 			<SegmentedToggle
 				bind:value={script}
 				label="Writing system"
@@ -339,7 +344,10 @@
 	.nav {
 		flex: 0 0 auto;
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) auto;
+		/* equal side columns, each at least as wide as the toggles, keep the search centred */
+		grid-template-columns:
+			minmax(var(--side, max-content), 1fr) minmax(0, 560px)
+			minmax(var(--side, max-content), 1fr);
 		align-items: center;
 		gap: 16px;
 		min-height: var(--nav-h);
@@ -355,6 +363,7 @@
 		letter-spacing: -0.02em;
 		color: var(--text);
 		text-decoration: none;
+		justify-self: start;
 	}
 	.brand span {
 		color: var(--accent);
@@ -381,6 +390,7 @@
 	.toggles {
 		display: flex;
 		gap: 8px;
+		justify-self: end;
 	}
 	.stage {
 		position: relative;
@@ -464,18 +474,17 @@
 		border-radius: 6px;
 	}
 
-	@media (max-width: 767px) {
+	/* too narrow for a centred search beside the toggles: the toggles float over the map,
+	   bottom-left, writing system above projection, and the credits move beside the map controls */
+	@media (max-width: 1099px) {
 		.nav {
-			grid-template-columns: auto minmax(0, 1fr);
-			gap: 10px;
+			--brand-w: 6rem;
+			/* both sides reserve the logo's width so the search stays centred (it shrinks instead) */
+			grid-template-columns: minmax(var(--brand-w), 1fr) minmax(0, 560px) minmax(
+					var(--brand-w),
+					1fr
+				);
 		}
-		.brand {
-			font-size: 1.15rem;
-		}
-		.search input {
-			font-size: 16px; /* prevents iOS zoom-on-focus */
-		}
-		/* phones: float over the map, bottom-left, writing system above projection */
 		.toggles {
 			position: fixed;
 			left: max(12px, env(safe-area-inset-left));
@@ -486,6 +495,24 @@
 		}
 		.toggles > :global(*) {
 			box-shadow: var(--shadow);
+		}
+		.credits {
+			left: auto;
+			right: 68px;
+			bottom: max(16px, env(safe-area-inset-bottom));
+		}
+	}
+
+	@media (max-width: 767px) {
+		.nav {
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 10px;
+		}
+		.brand {
+			font-size: 1.15rem;
+		}
+		.search input {
+			font-size: 16px; /* prevents iOS zoom-on-focus */
 		}
 		.status-slot {
 			top: 8px;
@@ -509,11 +536,6 @@
 			padding-bottom: max(16px, env(safe-area-inset-bottom));
 			max-height: 50dvh;
 			overflow-y: auto;
-		}
-		.credits {
-			left: auto;
-			right: 68px;
-			bottom: max(16px, env(safe-area-inset-bottom));
 		}
 	}
 </style>
