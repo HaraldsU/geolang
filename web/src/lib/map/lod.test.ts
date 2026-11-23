@@ -11,10 +11,11 @@ import {
 	minWeight,
 	prepare,
 	renderExtent,
-	simplifiedFeatures,
+	simplifiedLayers,
 	zoomBucket,
 	type CountryTopology
 } from './lod.js';
+import { borderArcs } from './borders.js';
 
 const topo: CountryTopology = JSON.parse(
 	readFileSync(
@@ -31,6 +32,9 @@ const projection = geoEqualEarth().fitExtent(
 	{ type: 'FeatureCollection', features: full }
 );
 const pre = prepare(topo);
+const arcs = borderArcs(topo);
+const simplifiedFeatures = (k: number) =>
+	simplifiedLayers(pre, projection.scale(), k, arcs).countries;
 
 function points(features: { geometry: Geometry }[], p = projection) {
 	let n = 0;
@@ -60,7 +64,7 @@ describe('zoom buckets', () => {
 });
 
 describe('simplified geometry', () => {
-	const world = simplifiedFeatures(pre, projection.scale(), 1);
+	const world = simplifiedFeatures(1);
 
 	it('keeps every country, including tiny islands', () => {
 		expect(world.map((f) => f.id)).toEqual(full.map((f) => (f as { id?: string }).id));
@@ -76,8 +80,15 @@ describe('simplified geometry', () => {
 	});
 
 	it('approaches full detail when zoomed in', () => {
-		const deep = simplifiedFeatures(pre, projection.scale(), 16);
+		const deep = simplifiedFeatures(16);
 		expect(points(deep)).toBeGreaterThan(points(full as never) * 0.9);
+	});
+
+	it('also returns solid border lines and dashed disputed outlines', () => {
+		const { solid, dashed } = simplifiedLayers(pre, projection.scale(), 1, arcs);
+		expect(solid!.geometry.coordinates.length).toBe(arcs.solid.length);
+		expect(dashed!.geometry.coordinates.length).toBe(arcs.dashed.length);
+		expect(arcs.dashed.length).toBeGreaterThan(10);
 	});
 
 	it('shared borders stay identical between neighbours (topology preserved)', () => {
@@ -107,7 +118,7 @@ describe('clipping to the viewport', () => {
 		// panning by half a screen is still covered, a 3x zoom-out is not
 		expect(covers(ext, { ...view, x: view.x + 700 }, 1400, 850)).toBe(true);
 		expect(covers(ext, { k: 4, x: 700 - cx * 4, y: 425 - cy * 4 }, 1400, 850)).toBe(false);
-		const deep = simplifiedFeatures(pre, projection.scale(), 16);
+		const deep = simplifiedFeatures(16);
 		expect(points(deep, clippedProjection(geoEqualEarth, projection, ext))).toBeLessThan(
 			points(deep) * 0.3
 		);

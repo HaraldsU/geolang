@@ -103,6 +103,7 @@ jobs:
             pipeline/.cache/wikidata
             pipeline/.cache/cldr
             pipeline/.cache/fonts
+            pipeline/.cache/naturalearth
           key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
           restore-keys: |
             sources-${{ steps.month.outputs.key }}-
@@ -145,6 +146,7 @@ jobs:
             pipeline/.cache/wikidata
             pipeline/.cache/cldr
             pipeline/.cache/fonts
+            pipeline/.cache/naturalearth
           key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
 
       - name: Save built data

@@ -13,6 +13,7 @@
 	--land-hover: #ffe9a8;
 	--land-selected: #ffd166;
 	--land-stroke: #8d8a82;
+	--border-disputed: #6b675f;
 	--label: #1d2125;
 	--label-halo: rgba(255, 255, 255, 0.92);
 	--label-na: #8a8f96;
@@ -39,6 +40,7 @@
 		--land-hover: #5a4a1f;
 		--land-selected: #8a6d1c;
 		--land-stroke: #5b6470;
+		--border-disputed: #8a93a0;
 		--label: #f1f3f5;
 		--label-halo: rgba(20, 23, 28, 0.9);
 		--label-na: #8a919b;

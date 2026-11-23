@@ -9,13 +9,15 @@ Rules (see project plan):
 
 from __future__ import annotations
 
-import copy
 import json
 from pathlib import Path
 from typing import Any
 
-from . import download
-from .paths import OVERRIDES_FILE, WORLD_TOPOLOGY_OUT, WORLD_TOPOLOGY_SRC
+from shapely.geometry import shape
+from shapely.ops import unary_union
+
+from . import borders, download
+from .paths import OVERRIDES_FILE, WORLD_TOPOLOGY_OUT
 
 NATIONAL_STATUSES = {"official", "de_facto_official"}
 
@@ -115,24 +117,51 @@ def _population_percent(territory: dict[str, Any], code: str) -> float:
     return 0.0
 
 
+def _feature_iso(props: dict[str, Any], num2a: dict[str, str], pseudo: dict[str, Any]) -> str | None:
+    if props["NAME"] in pseudo:
+        return pseudo[props["NAME"]]["id"]
+    for key in ("ISO_N3", "ISO_N3_EH"):  # e.g. France and Norway only have ISO_N3_EH
+        num = props.get(key)
+        if num in num2a:
+            return num2a[num]
+    return None
+
+
 def build_country_languages(
     territory_info: dict[str, Any],
     code_mappings: dict[str, Any],
-    topology: dict[str, Any],
+    ne_countries: list[dict[str, Any]],
+    ne_disputed: list[dict[str, Any]],
     names: dict[str, str],
     overrides: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Returns (countries mapping, topology with alpha-2 ids)."""
+    """Returns (countries mapping, map topology with alpha-2 ids), borders as in borders.py."""
     num2a = _alpha2_by_numeric(code_mappings, territory_info)
     pseudo = {k: v for k, v in overrides.get("pseudoTerritories", {}).items() if not k.startswith("_")}
-    topo = copy.deepcopy(topology)
-    countries: dict[str, Any] = {}
+    pseudo_langs = {v["id"]: v["languages"] for v in pseudo.values()}
+    rules = borders.parse_rules(overrides)
+    areas = borders.area_shapes(ne_disputed)
 
-    for geom in topo["objects"]["countries"]["geometries"]:
-        name = geom.get("properties", {}).get("name", "")
-        num = geom.get("id")
-        if num is not None and num in num2a:
-            iso = num2a[num]
+    shapes, outlines = borders.apply_rules(
+        [(_feature_iso(f["properties"], num2a, pseudo), f["properties"]["NAME"], shape(f["geometry"]))
+         for f in ne_countries],
+        areas,
+        rules,
+    )
+    unmapped = sorted(name for iso, name, _ in shapes if iso is None)
+    if unmapped:
+        raise ValueError(f"Map features without a country code: {unmapped}")
+
+    geoms: dict[str, Any] = {}
+    countries: dict[str, Any] = {}
+    for iso, name, geom in shapes:
+        if iso in geoms:  # several features for one territory (e.g. Ashmore and Cartier Is. -> AU)
+            geoms[iso] = unary_union([geoms[iso], geom])
+            continue
+        geoms[iso] = geom
+        if iso in pseudo_langs:
+            langs = list(pseudo_langs[iso])
+        else:
             territory = territory_info.get(iso, {})
             langs = official_languages(territory, names)
             for extra in overrides.get("add", {}).get(iso, []):
@@ -142,46 +171,15 @@ def build_country_languages(
             langs = [lang for lang in langs if lang not in removed]
             # keep official-first ordering, then by share of population
             langs.sort(key=lambda c: -_population_percent(territory, c))
-        elif name in pseudo:
-            iso = pseudo[name]["id"]
-            langs = list(pseudo[name]["languages"])
-        else:
-            raise ValueError(f"Topology feature without mapping: id={num!r} name={name!r}")
-
-        geom["id"] = iso
-        geom["properties"] = {"name": name}
-        if iso in countries:  # several features for one territory (e.g. Ashmore Is. -> AU)
-            continue
         countries[iso] = {"name": name, "languages": langs}
 
-    topo["objects"]["countries"]["geometries"] = _merge_duplicate_geometries(
-        topo["objects"]["countries"]["geometries"]
-    )
+    for iso, notes in borders.country_disputes(rules).items():
+        if iso not in countries:
+            raise ValueError(f"disputedAreas: note for unknown country {iso}")
+        countries[iso]["disputes"] = notes
+
+    topo = borders.map_topology([(iso, geoms[iso], countries[iso]["name"]) for iso in sorted(geoms)], outlines)
     return dict(sorted(countries.items())), topo
-
-
-def _as_multipolygon_arcs(geom: dict[str, Any]) -> list[Any]:
-    if geom["type"] == "Polygon":
-        return [geom["arcs"]]
-    if geom["type"] == "MultiPolygon":
-        return list(geom["arcs"])
-    return []
-
-
-def _merge_duplicate_geometries(geoms: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Merge TopoJSON geometries sharing an id into a single MultiPolygon (first one's name wins)."""
-    merged: dict[str, dict[str, Any]] = {}
-    order: list[str] = []
-    for g in geoms:
-        gid = g["id"]
-        if gid not in merged:
-            merged[gid] = g
-            order.append(gid)
-            continue
-        first = merged[gid]
-        arcs = _as_multipolygon_arcs(first) + _as_multipolygon_arcs(g)
-        merged[gid] = {**first, "type": "MultiPolygon", "arcs": arcs}
-    return [merged[i] for i in order]
 
 
 def build_language_meta(
@@ -208,14 +206,13 @@ def build_language_meta(
 
 
 def load_inputs() -> dict[str, Any]:
-    with open(WORLD_TOPOLOGY_SRC, encoding="utf-8") as f:
-        topology = json.load(f)
     return {
         "territory_info": download.cldr_json("territoryInfo")["supplemental"]["territoryInfo"],
         "code_mappings": download.cldr_json("codeMappings")["supplemental"]["codeMappings"],
         "language_data": download.cldr_json("languageData")["supplemental"]["languageData"],
         "names": download.cldr_json("languageNames")["main"]["en"]["localeDisplayNames"]["languages"],
-        "topology": topology,
+        "ne_countries": borders.natural_earth(borders.NE_COUNTRIES),
+        "ne_disputed": borders.natural_earth(borders.NE_DISPUTED),
         "overrides": load_overrides(),
     }
 
@@ -223,7 +220,8 @@ def load_inputs() -> dict[str, Any]:
 def build(inputs: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     inp = inputs or load_inputs()
     countries, topo = build_country_languages(
-        inp["territory_info"], inp["code_mappings"], inp["topology"], inp["names"], inp["overrides"]
+        inp["territory_info"], inp["code_mappings"], inp["ne_countries"], inp["ne_disputed"], inp["names"],
+        inp["overrides"],
     )
     codes = {lang for c in countries.values() for lang in c["languages"]}
     languages = build_language_meta(codes, inp["language_data"], inp["names"], inp["overrides"])

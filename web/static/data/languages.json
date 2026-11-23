@@ -748,6 +748,13 @@
   "font": "Noto Sans",
   "latin": true
  },
+ "tvl": {
+  "name": "Tuvalu",
+  "script": "Latn",
+  "dir": "ltr",
+  "font": "Noto Sans",
+  "latin": true
+ },
  "ty": {
   "name": "Tahitian",
   "script": "Latn",

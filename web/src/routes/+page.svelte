@@ -58,6 +58,7 @@
 		return {
 			iso,
 			name: countries[iso].name,
+			disputes: countries[iso].disputes,
 			forms: label?.forms ?? languageForms(countries[iso].languages, languages, concept)
 		};
 	}

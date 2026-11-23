@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { LanguageForm } from '#lib/data/country-labels.js';
-	import type { ScriptMode } from '#lib/data/types.js';
+	import type { Dispute, ScriptMode } from '#lib/data/types.js';
 	import { fontStack } from '#lib/fonts.js';
 
 	interface Props {
@@ -10,11 +10,23 @@
 		mode: ScriptMode;
 		hasConcept: boolean;
 		variant: 'panel' | 'tooltip';
+		/** disputed areas involving the country (panel only) */
+		disputes?: Dispute[];
 		/** link to report a wrong translation (panel only, when a word is shown) */
 		reportHref?: string | null;
 		onclose?: () => void;
 	}
-	let { iso, name, forms, mode, hasConcept, variant, reportHref = null, onclose }: Props = $props();
+	let {
+		iso,
+		name,
+		forms,
+		mode,
+		hasConcept,
+		variant,
+		disputes = [],
+		reportHref = null,
+		onclose
+	}: Props = $props();
 </script>
 
 <section
@@ -66,6 +78,13 @@
 						{/if}
 					{/if}
 				</li>
+			{/each}
+		</ul>
+	{/if}
+	{#if disputes.length && variant === 'panel'}
+		<ul class="disputes" data-testid="disputes" aria-label="Disputed areas">
+			{#each disputes as d (d.area)}
+				<li><strong>{d.area}:</strong> {d.note}</li>
 			{/each}
 		</ul>
 	{/if}
@@ -160,6 +179,25 @@
 	.muted {
 		margin: 6px 0 0;
 		font-size: 0.85rem;
+	}
+	.disputes {
+		display: block;
+		margin-top: 10px;
+		padding-top: 8px;
+		border-top: 1px solid var(--border);
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		line-height: 1.4;
+	}
+	.disputes li {
+		display: block;
+	}
+	.disputes li + li {
+		margin-top: 4px;
+	}
+	.disputes strong {
+		color: var(--text);
+		font-weight: 600;
 	}
 	.report {
 		display: inline-flex;

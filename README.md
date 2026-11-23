@@ -23,10 +23,13 @@ geolang/
 | Translations | English Wiktionary translation tables via [kaikki.org](https://kaikki.org/) | CC BY-SA 4.0 |
 | Gap filling for nouns | Wikidata item labels (only senses Wiktionary links to an item) | CC0 |
 | Official languages | Unicode CLDR `territoryInfo` (`official` + `de_facto_official`) + `pipeline/overrides.json` | Unicode v3 |
-| Map | Natural Earth 1:50m via `world-atlas` | Public domain |
+| Map | Natural Earth 1:50m v5.1.1 (countries + breakaway/disputed areas), borders redrawn per `disputedAreas` in `pipeline/overrides.json` | Public domain |
 | Fonts | Noto (self-hosted via Fontsource); subsets of Noto Sans CJK and Plangothic for rare Han characters (`python -m geolang fonts`) | OFL |
 
-Only national-level official languages are used; regional ones (e.g. Catalan in Spain, Tamil in
+Borders follow international law as reflected in UN resolutions (e.g. Crimea is shown in Ukraine);
+where there is no settled answer (e.g. Kashmir) the administering country is kept. Every disputed area
+is an explicit entry in `pipeline/overrides.json` (`disputedAreas`), outlined dashed on the map with
+a note in the country panel. Only national-level official languages are used; regional ones (e.g. Catalan in Spain, Tamil in
 India) are excluded. Manual corrections (e.g. South Africa's 11 national languages) live in
 `pipeline/overrides.json`.
 
@@ -43,7 +46,7 @@ npm run dev                      # http://localhost:5173
 # data pipeline
 cd pipeline
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m geolang languages      # countries.json, languages.json, map topology
+.venv/bin/python -m geolang languages      # countries.json, languages.json, map topology (needs web/node_modules)
 curl -L -o .cache/kaikki/English.jsonl.gz --create-dirs \
   https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz
 .venv/bin/python -m geolang translations   # ~3 min + Wikidata label fetch (cached)

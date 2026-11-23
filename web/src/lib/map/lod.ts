@@ -1,8 +1,9 @@
 import type { GeoProjection } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { presimplify, simplify } from 'topojson-simplify';
-import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, MultiLineString } from 'geojson';
 import type { GeometryCollection, Topology } from 'topojson-specification';
+import type { BorderArcs } from './borders.js';
 
 /**
  * Level-of-detail rendering for the country outlines.
@@ -14,8 +15,19 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
  * zoomed in, clip outlines to the area around the viewport.
  */
 
-export type CountryTopology = Topology<{ countries: GeometryCollection<{ name: string }> }>;
+export type CountryTopology = Topology<{
+	countries: GeometryCollection<{ name: string }>;
+	/** Land outlines of disputed areas (MultiLineStrings), drawn dashed. */
+	disputed?: GeometryCollection<{ name: string }>;
+}>;
 export type Country = Feature<Geometry, { name: string }> & { id: string };
+
+/** What the map draws at one level of detail. */
+export interface Layers {
+	countries: Country[];
+	solid: Feature<MultiLineString> | null;
+	dashed: Feature<MultiLineString> | null;
+}
 
 export interface View {
 	k: number;
@@ -53,14 +65,28 @@ export function minWeight(projectionScale: number, k: number): number {
 	return MIN_AREA_PX * degPerPx * degPerPx;
 }
 
-export function simplifiedFeatures(
+function lines(topo: CountryTopology, arcs: number[]): Feature<MultiLineString> | null {
+	if (!arcs.length) return null;
+	return feature(topo, {
+		type: 'MultiLineString',
+		arcs: arcs.map((a) => [a])
+	}) as Feature<MultiLineString>;
+}
+
+export function simplifiedLayers(
 	pre: CountryTopology,
 	projectionScale: number,
-	k: number
-): Country[] {
+	k: number,
+	borders: BorderArcs
+): Layers {
 	const topo = simplify(pre, minWeight(projectionScale, detailZoom(k))) as CountryTopology;
-	return (feature(topo, topo.objects.countries) as FeatureCollection<Geometry, { name: string }>)
-		.features as Country[];
+	return {
+		countries: (
+			feature(topo, topo.objects.countries) as FeatureCollection<Geometry, { name: string }>
+		).features as Country[],
+		solid: lines(topo, borders.solid),
+		dashed: lines(topo, borders.dashed)
+	};
 }
 
 /** Projected (un-zoomed) rectangle to keep when rendering `view`, or null for no clipping. */

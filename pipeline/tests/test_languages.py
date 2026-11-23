@@ -1,6 +1,9 @@
 import copy
 
-from geolang import languages
+import pytest
+from shapely.geometry import Point, shape
+
+from geolang import borders, languages
 
 
 def test_every_map_country_has_a_language(built):
@@ -81,3 +84,65 @@ def test_override_changes_output(lang_inputs):
     assert countries["FR"]["languages"] == ["fr", "br"]
     assert "de" not in countries["BE"]["languages"]
     assert "br" in langs
+
+
+def _country_at(built, lon, lat):
+    """ISO code of the map country containing a point, decoded from the built topology."""
+    topo = built["topology"]
+
+    def ring(ids):
+        pts = []
+        for i in ids:
+            coords = borders._arc_coords(topo, i if i >= 0 else ~i)
+            pts += (coords if i >= 0 else coords[::-1])[(1 if pts else 0):]
+        return pts
+
+    for g in topo["objects"]["countries"]["geometries"]:
+        polys = [g["arcs"]] if g["type"] == "Polygon" else g["arcs"]
+        for poly in polys:
+            geom = shape({"type": "Polygon", "coordinates": [ring(r) for r in poly]})
+            if geom.contains(Point(lon, lat)):
+                return g["id"]
+    return None
+
+
+def test_borders_follow_international_law(built):
+    assert _country_at(built, 34.1, 44.95) == "UA"  # Simferopol, Crimea
+    assert _country_at(built, 33.52, 44.6) == "UA"  # Sevastopol
+    assert _country_at(built, 35.75, 33.0) == "SY"  # Golan Heights
+    assert _country_at(built, -13.2, 27.15) == "EH"  # Laayoune, Western Sahara
+    assert _country_at(built, 33.32, 35.33) == "CY"  # Kyrenia, Northern Cyprus
+    assert _country_at(built, 44.06, 9.56) == "SO"  # Hargeisa, Somaliland
+    assert _country_at(built, 41.0, 43.0) == "GE"  # Sukhumi, Abkhazia
+    # no settled answer: the administering country
+    assert _country_at(built, 74.8, 34.08) == "IN"  # Srinagar
+    assert _country_at(built, 74.3, 35.9) == "PK"  # Gilgit
+    assert _country_at(built, 79.5, 35.2) == "CN"  # Aksai Chin
+    assert _country_at(built, 21.17, 42.67) == "XK"  # Pristina
+    assert not {"XN", "XS", "XG"} & set(built["countries"])
+
+
+def test_disputed_areas_are_outlined_and_explained(built):
+    lines = {g["properties"]["name"]: g for g in built["topology"]["objects"]["disputed"]["geometries"]}
+    assert {"Crimea", "Golan Heights", "Western Sahara", "Kashmir", "Kosovo"} <= set(lines)
+    assert "Artsakh" not in lines and "Occupied regions" not in lines  # dashed: false
+    assert all(g["type"] == "MultiLineString" and g["arcs"] for g in lines.values())
+
+    notes = {iso: [d["area"] for d in c.get("disputes", [])] for iso, c in built["countries"].items()}
+    assert "Crimea" in notes["UA"] and "Crimea" in notes["RU"]
+    assert "Kashmir" in notes["IN"] and "Kashmir" in notes["PK"] and "Kashmir" in notes["CN"]
+    assert notes["TW"] == ["Taiwan"]
+    assert notes["FR"] == ["Lawa Headwaters"]
+    assert "disputes" not in built["countries"]["DE"]
+
+
+def test_every_disputed_area_has_a_rule(lang_inputs):
+    inputs = copy.deepcopy(lang_inputs)
+    del inputs["overrides"]["disputedAreas"]["Crimea"]
+    with pytest.raises(ValueError, match="Crimea"):
+        languages.build(inputs)
+
+
+def test_build_is_deterministic(lang_inputs, built):
+    _, _, topo = languages.build(copy.deepcopy(lang_inputs))
+    assert topo == built["topology"]

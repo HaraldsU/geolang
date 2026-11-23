@@ -32,7 +32,7 @@
     ]
   },
   "pseudoTerritories": {
-    "_comment": "world-atlas features without an ISO numeric id",
+    "_comment": "Natural Earth map features without a usable ISO numeric code (matched by NAME)",
     "Kosovo": {
       "id": "XK",
       "languages": [
@@ -40,33 +40,15 @@
         "sr"
       ]
     },
-    "N. Cyprus": {
-      "id": "XN",
-      "languages": [
-        "tr"
-      ]
-    },
-    "Somaliland": {
-      "id": "XS",
-      "languages": [
-        "so",
-        "ar"
-      ]
-    },
     "Indian Ocean Ter.": {
       "id": "XI",
       "languages": [
         "en"
       ]
-    },
-    "Siachen Glacier": {
-      "id": "XG",
-      "languages": []
     }
   },
   "noLanguage": [
-    "AQ",
-    "XG"
+    "AQ"
   ],
   "languageScript": {
     "hak": "Hant",
@@ -78,5 +60,240 @@
   "languageName": {
     "wni": "Comorian (Ndzwani)",
     "zdj": "Comorian (Ngazidja)"
+  },
+  "disputedAreas": {
+    "_comment": "Every area of Natural Earth's breakaway/disputed layer (keyed by the rule's display name; areas = BRK_NAME). Where a UN resolution settles sovereignty, assignTo moves the area to that country; otherwise the administering country keeps it. dashed: outline the areas on the map (default true). countries: whose panel shows the note.",
+    "Crimea": {
+      "areas": [
+        "Crimea"
+      ],
+      "assignTo": "UA",
+      "countries": [
+        "UA",
+        "RU"
+      ],
+      "note": "Part of Ukraine under international law (UN General Assembly resolution 68/262); occupied by Russia since 2014."
+    },
+    "Occupied regions": {
+      "areas": [
+        "Donetsk People's Republic",
+        "Luhansk People's Republic"
+      ],
+      "assignTo": "UA",
+      "dashed": false,
+      "countries": [
+        "UA",
+        "RU"
+      ],
+      "note": "Parts of the Donetsk, Luhansk, Zaporizhzhia and Kherson regions are occupied by Russia; they are part of Ukraine under international law (UN General Assembly resolution ES-11/4). The front line is not drawn."
+    },
+    "Golan Heights": {
+      "areas": [
+        "Golan Heights"
+      ],
+      "assignTo": "SY",
+      "countries": [
+        "SY",
+        "IL"
+      ],
+      "note": "Part of Syria under international law (UN Security Council resolution 497); occupied by Israel since 1967."
+    },
+    "Western Sahara": {
+      "areas": [
+        "W. Sahara"
+      ],
+      "assignTo": "EH",
+      "countries": [
+        "EH",
+        "MA"
+      ],
+      "note": "A non-self-governing territory according to the UN, whose status is unresolved; most of it is administered by Morocco, which claims it."
+    },
+    "Northern Cyprus": {
+      "areas": [
+        "N. Cyprus"
+      ],
+      "assignTo": "CY",
+      "countries": [
+        "CY",
+        "TR"
+      ],
+      "note": "Part of Cyprus under international law (UN Security Council resolution 541); a breakaway state recognised only by Turkey."
+    },
+    "Somaliland": {
+      "areas": [
+        "Somaliland"
+      ],
+      "assignTo": "SO",
+      "countries": [
+        "SO"
+      ],
+      "note": "Part of Somalia under international law; has governed itself since declaring independence in 1991."
+    },
+    "Abkhazia": {
+      "areas": [
+        "Abkhazia"
+      ],
+      "assignTo": "GE",
+      "countries": [
+        "GE",
+        "RU"
+      ],
+      "note": "Part of Georgia under international law; a Russian-backed breakaway region."
+    },
+    "South Ossetia": {
+      "areas": [
+        "South Ossetia"
+      ],
+      "assignTo": "GE",
+      "countries": [
+        "GE",
+        "RU"
+      ],
+      "note": "Part of Georgia under international law; a Russian-backed breakaway region."
+    },
+    "Transnistria": {
+      "areas": [
+        "Transnistria"
+      ],
+      "assignTo": "MD",
+      "countries": [
+        "MD"
+      ],
+      "note": "Part of Moldova under international law; a breakaway region not recognised by any UN member state."
+    },
+    "Artsakh": {
+      "areas": [
+        "Artsakh"
+      ],
+      "assignTo": "AZ",
+      "dashed": false,
+      "_comment": "Nagorno-Karabakh: under Azerbaijan's control since 2023, the breakaway republic dissolved in 2024"
+    },
+    "Kashmir": {
+      "areas": [
+        "Jammu and Kashmir",
+        "Gilgit-Baltistan",
+        "Aksai Chin",
+        "Shaksam Valley",
+        "Demchok"
+      ],
+      "countries": [
+        "IN",
+        "PK",
+        "CN"
+      ],
+      "note": "Disputed between India, Pakistan and China; shown as each administers it, along the Line of Control and the Line of Actual Control."
+    },
+    "Siachen Glacier": {
+      "areas": [
+        "Siachen Glacier"
+      ],
+      "assignTo": "IN",
+      "countries": [
+        "IN",
+        "PK"
+      ],
+      "note": "Administered by India; claimed by Pakistan."
+    },
+    "Arunachal Pradesh": {
+      "areas": [
+        "Arunachal Pradesh",
+        "Tirpani Valleys",
+        "Bara Hotii Valleys",
+        "Samdu Valleys"
+      ],
+      "countries": [
+        "IN",
+        "CN"
+      ],
+      "note": "Administered by India; claimed by China."
+    },
+    "Junagadh and Manavadar": {
+      "areas": [
+        "Junagadh and Manavadar"
+      ],
+      "countries": [
+        "IN",
+        "PK"
+      ],
+      "note": "Administered by India; claimed by Pakistan."
+    },
+    "Abyei": {
+      "areas": [
+        "Abyei"
+      ],
+      "countries": [
+        "SD",
+        "SS"
+      ],
+      "note": "Claimed by both Sudan and South Sudan; a UN peacekeeping mission (UNISFA) has been there since 2011."
+    },
+    "Ilemi Triangle": {
+      "areas": [
+        "Ilemi Triangle"
+      ],
+      "countries": [
+        "KE",
+        "SS"
+      ],
+      "note": "Administered by Kenya; claimed by South Sudan."
+    },
+    "Southern Kuril Islands": {
+      "areas": [
+        "Kuril Is."
+      ],
+      "countries": [
+        "RU",
+        "JP"
+      ],
+      "note": "Administered by Russia; claimed by Japan."
+    },
+    "Lawa Headwaters": {
+      "areas": [
+        "Lawa Headwaters"
+      ],
+      "countries": [
+        "FR",
+        "SR"
+      ],
+      "note": "Administered by France (French Guiana); claimed by Suriname."
+    },
+    "Courantyne Headwaters": {
+      "areas": [
+        "Courantyne Headwaters"
+      ],
+      "countries": [
+        "GY",
+        "SR"
+      ],
+      "note": "Administered by Guyana; claimed by Suriname."
+    },
+    "Sabah": {
+      "areas": [
+        "North Borneo"
+      ],
+      "countries": [
+        "MY",
+        "PH"
+      ],
+      "note": "Administered by Malaysia; claimed by the Philippines."
+    },
+    "Kosovo": {
+      "outlineCountry": "XK",
+      "countries": [
+        "XK",
+        "RS"
+      ],
+      "note": "Declared independence from Serbia in 2008 and is recognised by about half of UN member states; Serbia regards it as its province (UN Security Council resolution 1244)."
+    },
+    "Taiwan": {
+      "countries": [
+        "TW",
+        "CN"
+      ],
+      "dashed": false,
+      "note": "Governed by the Republic of China; claimed by the People's Republic of China."
+    }
   }
 }

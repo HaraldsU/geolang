@@ -47,8 +47,8 @@
 		</li>
 		<li>
 			<strong>Map</strong>:
-			<a href="https://www.naturalearthdata.com/" rel="noopener">Natural Earth</a> (public domain) via
-			world-atlas.
+			<a href="https://www.naturalearthdata.com/" rel="noopener">Natural Earth</a> 1:50m, version 5.1.1
+			(public domain), with borders redrawn as described below.
 		</li>
 		<li>
 			<strong>Fonts</strong>: <a href="https://fonts.google.com/noto" rel="noopener">Noto</a>, and
@@ -61,9 +61,29 @@
 			</a> (both SIL Open Font License).
 		</li>
 	</ul>
+	<h2>Borders</h2>
+	<p>
+		Borders follow international law as reflected in UN resolutions, because a country’s border
+		decides which official language is shown:
+	</p>
+	<ul>
+		<li>
+			Where a UN General Assembly or Security Council resolution settles which country an area
+			belongs to, it is shown as part of that country, even where another country controls it:
+			Crimea is shown in Ukraine, the Golan Heights in Syria, Northern Cyprus in Cyprus. The same
+			applies to breakaway regions that no UN member state recognises, such as Abkhazia, South
+			Ossetia, Transnistria and Somaliland. Western Sahara is shown whole, as the UN lists it as a
+			non-self-governing territory.
+		</li>
+		<li>
+			Where there is no settled answer, as in Kashmir, an area is shown as part of the country that
+			administers it.
+		</li>
+		<li>Kosovo and Taiwan are shown separately, as in the ISO 3166 country list.</li>
+	</ul>
 	<p class="muted">
-		Borders and names follow Natural Earth’s conventions and do not imply any position on disputed
-		territories.
+		Dashed lines outline disputed areas. The panel of each country involved explains the dispute.
+		This does not imply any position on the disputes themselves.
 	</p>
 </main>
 

@@ -12,11 +12,13 @@
 		covers,
 		prepare,
 		renderExtent,
-		simplifiedFeatures,
+		simplifiedLayers,
 		zoomBucket,
 		type CountryTopology,
+		type Layers,
 		type View
 	} from './lod.js';
+	import { borderArcs, type BorderArcs } from './borders.js';
 	import { DEFAULT_PROJECTION, PROJECTIONS, type ProjectionName } from './projections.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
@@ -64,7 +66,15 @@
 	let hovered = $state<string | null>(null);
 	/** Data loaded, map sized and the initial view applied. */
 	let ready = $state(false);
-	let colors = $state({ ocean: '', land: '', word: '', hover: '', selected: '', stroke: '' });
+	let colors = $state({
+		ocean: '',
+		land: '',
+		word: '',
+		hover: '',
+		selected: '',
+		stroke: '',
+		disputed: ''
+	});
 	let width = $state(0);
 	let height = $state(0);
 	let features = $state.raw<CountryFeature[]>([]);
@@ -75,6 +85,7 @@
 	let pendingTransform: ZoomTransform | null = null;
 	let frame: number | null = null;
 	let simplifiable = $state.raw<CountryTopology | null>(null);
+	let borders = $state.raw<BorderArcs>({ solid: [], dashed: [] });
 	/** View the country geometry was last built for (updated when a gesture settles). */
 	let renderView = $state.raw<View | null>(null);
 	let renderTimer: ReturnType<typeof setTimeout> | undefined;
@@ -106,22 +117,27 @@
 	// Level of detail: simplified per 2x zoom bucket and, when zoomed in, clipped to the
 	// area around the viewport (see lod.ts). Full-detail `features` are still used for fitting,
 	// label anchors and anything else that needs exact geometry.
-	let lodCache: { key: string; features: CountryFeature[] } | null = null;
-	const lodFeatures = $derived.by(() => {
-		if (!simplifiable) return features;
+	let lodCache: { key: string; layers: Layers } | null = null;
+	const lod = $derived.by((): Layers => {
+		if (!simplifiable) return { countries: features, solid: null, dashed: null };
 		const key = `${projection.scale()}|${zoomBucket(renderView?.k ?? 1)}`;
 		if (lodCache?.key !== key) {
 			lodCache = {
 				key,
-				features: simplifiedFeatures(simplifiable, projection.scale(), renderView?.k ?? 1)
+				layers: simplifiedLayers(simplifiable, projection.scale(), renderView?.k ?? 1, borders)
 			};
 		}
-		return lodCache.features;
+		return lodCache.layers;
 	});
 	const extent = $derived(renderView ? renderExtent(renderView, width, height) : null);
-	const shapes = $derived.by(() => {
-		const draw = geoPath(clippedProjection(createProjection, projection, extent));
-		return lodFeatures.map((f) => ({ id: f.id, name: f.properties.name, d: draw(f) ?? '' }));
+	const toPath = $derived(geoPath(clippedProjection(createProjection, projection, extent)));
+	const shapes = $derived(
+		lod.countries.map((f) => ({ id: f.id, name: f.properties.name, d: toPath(f) ?? '' }))
+	);
+	/** Borders and coastlines (solid) and disputed-area outlines (dashed); null before data loads. */
+	const lines = $derived({
+		solid: lod.solid && new Path2D(toPath(lod.solid) ?? ''),
+		dashed: lod.dashed && new Path2D(toPath(lod.dashed) ?? '')
 	});
 
 	// Countries are painted on a canvas, redrawn synchronously on every frame at the exact zoom.
@@ -148,7 +164,7 @@
 		return d.length ? new Path2D(d.join('')) : null;
 	});
 
-	function draw() {
+	function paint() {
 		const c = canvas?.getContext('2d');
 		if (!c || !width || !height) return;
 		const { k, x, y } = transform;
@@ -175,11 +191,18 @@
 		c.lineWidth = 0.6 / k;
 		c.lineJoin = 'round';
 		c.strokeStyle = colors.stroke;
-		c.stroke(paths.all);
+		c.stroke(lines.solid ?? paths.all);
+		if (lines.dashed) {
+			c.strokeStyle = colors.disputed;
+			c.setLineDash([3 / k, 2 / k]);
+			c.stroke(lines.dashed);
+			c.setLineDash([]);
+		}
+		canvas.dataset.disputed = String(lod.dashed?.geometry.coordinates.length ?? 0);
 		canvas.dataset.k = k.toFixed(3); // zoom the last frame was painted at (for tests)
 	}
 
-	$effect(draw);
+	$effect(paint);
 
 	function readColors() {
 		const s = getComputedStyle(container);
@@ -190,7 +213,8 @@
 			word: v('--land-word'),
 			hover: v('--land-hover'),
 			selected: v('--land-selected'),
-			stroke: v('--land-stroke')
+			stroke: v('--land-stroke'),
+			disputed: v('--border-disputed')
 		};
 	}
 
@@ -331,6 +355,7 @@
 					{ name: string }
 				>;
 				features = fc.features as CountryFeature[];
+				borders = borderArcs(topo);
 				simplifiable = prepare(topo as CountryTopology);
 			})
 			.catch((e: Error) => {

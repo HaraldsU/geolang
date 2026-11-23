@@ -30,7 +30,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: Install web dependencies (map topology source)
+      - name: Install web dependencies (map topology builder)
         run: npm ci --ignore-scripts
         working-directory: web
       - uses: actions/setup-python@v5
@@ -43,8 +43,10 @@ jobs:
         working-directory: pipeline
       - uses: actions/cache@v4
         with:
-          path: pipeline/.cache/cldr
-          key: cldr-${{ hashFiles('pipeline/geolang/download.py') }}
+          path: |
+            pipeline/.cache/cldr
+            pipeline/.cache/naturalearth
+          key: sources-${{ hashFiles('pipeline/geolang/download.py', 'pipeline/geolang/borders.py') }}
       - name: Check committed country/language data is up to date
         working-directory: pipeline
         run: |
