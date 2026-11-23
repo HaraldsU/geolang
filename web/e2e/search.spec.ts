@@ -160,3 +160,26 @@ test('network failures show a retry button', async ({ page }) => {
 	await status.getByRole('button', { name: 'Retry' }).click();
 	await expect.poll(() => labelText(page, 'FR')).toBe('bonjour');
 });
+
+test('the country panel links to a pre-filled report of a wrong translation', async ({ page }) => {
+	// no word shown yet: nothing to report
+	await selectCountry(page, 'FR');
+	await expect(page.getByTestId('report-mistake')).toHaveCount(0);
+	await page.getByTestId('panel-close').click();
+
+	await search(page, 'hello');
+	await expect.poll(() => labelText(page, 'RU')).toBe('zdravstvujte');
+	await selectCountry(page, 'RU');
+	const link = page.getByTestId('report-mistake');
+	await expect(link).toBeVisible();
+	await expect(link).toHaveAttribute('target', '_blank');
+	await expect(link).toHaveAttribute('rel', /noopener/);
+	const url = new URL((await link.getAttribute('href'))!);
+	expect(`${url.origin}${url.pathname}`).toBe('https://github.com/HaraldsU/geolang/issues/new');
+	expect(url.searchParams.get('title')).toContain('"hello"');
+	expect(url.searchParams.get('title')).toContain('Russia');
+	const body = url.searchParams.get('body')!;
+	expect(body).toContain('здравствуйте (zdravstvujte)');
+	expect(body).toContain('Page: ');
+	expect(body).toContain('q=hello');
+});

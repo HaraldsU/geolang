@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import WorldMap from '#lib/map/WorldMap.svelte';
 	import MapLabels from '#lib/map/MapLabels.svelte';
 	import MapControls from '#lib/components/MapControls.svelte';
@@ -15,6 +16,7 @@
 	} from '#lib/data/lookup.js';
 	import { buildCountryLabels, languageForms } from '#lib/data/country-labels.js';
 	import type { Countries, Languages, ScriptMode } from '#lib/data/types.js';
+	import { reportUrl } from '#lib/data/report.js';
 
 	const POS_NAMES: Record<string, string> = {
 		noun: 'noun',
@@ -131,16 +133,29 @@
 	}
 
 	// Keep the URL shareable: ?q=hello&sense=<id>&script=native
-	$effect(() => {
+	const shareQuery = $derived.by(() => {
 		const params = new URLSearchParams();
 		if (searchedFor) params.set('q', searchedFor);
 		if (searchedFor && senseId && refs.length > 1 && senseId !== refs[0]?.id) {
 			params.set('sense', senseId);
 		}
 		if (script !== 'latin') params.set('script', script);
-		if (!ready) return;
 		const qs = params.toString();
-		const next = `${location.pathname}${qs ? `?${qs}` : ''}`;
+		return qs ? `?${qs}` : '';
+	});
+	const reportHref = $derived(
+		concept && selectedPanel
+			? reportUrl({
+					concept,
+					country: { iso: selectedPanel.iso, name: selectedPanel.name },
+					forms: selectedPanel.forms,
+					pageUrl: `${page.url.origin}${page.url.pathname}${shareQuery}`
+				})
+			: null
+	);
+	$effect(() => {
+		const next = `${location.pathname}${shareQuery}`;
+		if (!ready) return;
 		if (next !== `${location.pathname}${location.search}`) replaceState(next, {});
 	});
 
@@ -256,6 +271,7 @@
 					mode={script}
 					hasConcept={!!concept}
 					variant="panel"
+					{reportHref}
 					onclose={() => (selected = null)}
 				/>
 			</div>

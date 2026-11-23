@@ -16,6 +16,11 @@
 		current zoom, a dot marks it instead (a hollow ring means <em>N/A</em>); zoom in or tap the
 		country to see the word.
 	</p>
+	<p data-testid="accuracy-note">
+		Translations come from Wiktionary, a dictionary written by volunteers, and are shown as listed
+		there without further checking, so some may be wrong, unusual or misspelled. If you spot one,
+		select the country and use <em>Report a wrong translation</em>.
+	</p>
 	<p>
 		All data is prepared ahead of time from open dictionaries; nothing you type leaves your browser
 		other than requests for static data files. There are no accounts and no tracking cookies.

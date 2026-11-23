@@ -37,6 +37,7 @@ test('about page has no serious accessibility violations and lists sources', asy
 	for (const name of ['Wiktionary', 'Wikidata', 'Unicode CLDR', 'Natural Earth', 'CC BY-SA 4.0']) {
 		await expect(sources).toContainText(name);
 	}
+	await expect(page.getByTestId('accuracy-note')).toContainText('may be wrong');
 	expect(await seriousViolations(page)).toEqual([]);
 	await page.getByRole('link', { name: /back to the map/i }).click();
 	await expect(page.getByTestId('world-map')).toBeVisible();

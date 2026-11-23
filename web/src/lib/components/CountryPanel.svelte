@@ -10,9 +10,11 @@
 		mode: ScriptMode;
 		hasConcept: boolean;
 		variant: 'panel' | 'tooltip';
+		/** link to report a wrong translation (panel only, when a word is shown) */
+		reportHref?: string | null;
 		onclose?: () => void;
 	}
-	let { iso, name, forms, mode, hasConcept, variant, onclose }: Props = $props();
+	let { iso, name, forms, mode, hasConcept, variant, reportHref = null, onclose }: Props = $props();
 </script>
 
 <section
@@ -66,6 +68,17 @@
 				</li>
 			{/each}
 		</ul>
+	{/if}
+	{#if reportHref && hasConcept && variant === 'panel'}
+		<a
+			class="report"
+			href={reportHref}
+			target="_blank"
+			rel="noopener noreferrer"
+			data-testid="report-mistake"
+		>
+			Report a wrong translation
+		</a>
 	{/if}
 </section>
 
@@ -147,6 +160,17 @@
 	.muted {
 		margin: 6px 0 0;
 		font-size: 0.85rem;
+	}
+	.report {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		margin: 4px 0 -10px;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+	}
+	.report:hover {
+		color: var(--accent);
 	}
 	.close {
 		width: 44px;
