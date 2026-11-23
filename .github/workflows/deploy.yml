@@ -1,16 +1,32 @@
 name: Build data & deploy
 
-# Rebuilds the translation data from the latest Wiktionary/Wikidata/CLDR and deploys the static
-# site to Cloudflare Pages. Runs monthly (kaikki.org refreshes its dumps), on pushes to main and
-# on demand. Requires repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID and the
-# variable CLOUDFLARE_PROJECT (Pages project name) and PRODUCTION_URL (e.g. https://geolang.io).
+# Deploys the static site to Cloudflare Pages on pushes to main (and on demand).
+#
+# The translation data (~370 MB, 5-15 min to build) is only rebuilt when it can have changed:
+#   - monthly (schedule; kaikki.org refreshes its Wiktionary dumps),
+#   - when the pipeline code/overrides or the map package change,
+#   - or when requested via "Run workflow" with "Rebuild data" ticked.
+# Otherwise the last built data is restored from the Actions cache and only the website is
+# rebuilt, so a normal code push deploys in a few minutes.
+#
+# Requires repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID and the variables
+# CLOUDFLARE_PROJECT (Pages project name) and PRODUCTION_URL (e.g. https://geolang.io).
 
 on:
   schedule:
     - cron: '0 4 3 * *'
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '**.MD'
+      - 'LICENSE*'
   workflow_dispatch:
+    inputs:
+      rebuild_data:
+        description: Rebuild the translation data even if a cached build exists
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -33,20 +49,53 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: sudo apt-get update && sudo apt-get install -y libicu-dev pkg-config
-      - run: pip install -e '.[dev]'
-        working-directory: pipeline
 
       - name: Month key
         id: month
         run: echo "key=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      # Built data is keyed by month + everything that affects its content. Keys end in the run
+      # id (cache entries are immutable); restore takes the newest build with a matching prefix.
+      - name: Restore built data
+        id: data
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            web/static/data
+            web/static/world
+          key: data-${{ steps.month.outputs.key }}-${{ hashFiles('pipeline/geolang/**', 'pipeline/overrides.json', 'pipeline/pyproject.toml', 'pipeline/wordlists/**', 'web/package-lock.json') }}-${{ github.run_id }}
+          restore-keys: |
+            data-${{ steps.month.outputs.key }}-${{ hashFiles('pipeline/geolang/**', 'pipeline/overrides.json', 'pipeline/pyproject.toml', 'pipeline/wordlists/**', 'web/package-lock.json') }}-
+
+      - name: Decide whether to rebuild data
+        id: plan
+        run: |
+          if [ -z "${{ steps.data.outputs.cache-matched-key }}" ] \
+             || [ "${{ github.event_name }}" = "schedule" ] \
+             || [ "${{ inputs.rebuild_data }}" = "true" ] \
+             || [ ! -f web/static/data/manifest.json ]; then
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+            echo "Rebuilding translation data"
+          else
+            echo "rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "Reusing data from cache: ${{ steps.data.outputs.cache-matched-key }}"
+          fi
+
+      # ---- data build (only when needed) ---------------------------------------------------
+      - uses: actions/setup-python@v5
+        if: steps.plan.outputs.rebuild == 'true'
+        with:
+          python-version: '3.12'
+      - name: Install pipeline
+        if: steps.plan.outputs.rebuild == 'true'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libicu-dev pkg-config
+          pip install -e 'pipeline[dev]'
+
       # Restore and save are separate steps so the downloads are cached even when a later step
-      # (e.g. the Cloudflare upload) fails. Keys include the run id because cache entries are
-      # immutable; restore picks the newest entry for this month, then any older one.
+      # (e.g. the Cloudflare upload) fails.
       - name: Restore source dumps & Wikidata labels
+        if: steps.plan.outputs.rebuild == 'true'
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -59,6 +108,7 @@ jobs:
             sources-
 
       - name: Download Wiktionary dump (kaikki.org)
+        if: steps.plan.outputs.rebuild == 'true'
         working-directory: pipeline
         run: |
           mkdir -p .cache/kaikki
@@ -71,6 +121,8 @@ jobs:
           fi
 
       - name: Build data
+        id: build
+        if: steps.plan.outputs.rebuild == 'true'
         working-directory: pipeline
         env:
           GEOLANG_CONTACT: ${{ vars.GEOLANG_CONTACT }}
@@ -83,7 +135,7 @@ jobs:
       # Save even if the data build failed: the Wikidata label cache only ever contains
       # successful responses, so partial progress is still worth keeping.
       - name: Save source dumps & Wikidata labels
-        if: always() && hashFiles('pipeline/.cache/kaikki/English.jsonl.gz') != ''
+        if: always() && steps.plan.outputs.rebuild == 'true' && hashFiles('pipeline/.cache/kaikki/English.jsonl.gz') != ''
         uses: actions/cache/save@v4
         with:
           path: |
@@ -92,6 +144,16 @@ jobs:
             pipeline/.cache/cldr
           key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
 
+      - name: Save built data
+        if: steps.build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            web/static/data
+            web/static/world
+          key: ${{ steps.data.outputs.cache-primary-key }}
+
+      # ---- site --------------------------------------------------------------------------
       - name: Build site
         working-directory: web
         run: npm run build
