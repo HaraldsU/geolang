@@ -10,13 +10,26 @@
 	}
 	let { ctx, labels }: Props = $props();
 
-	// Anchors depend only on the projection (i.e. viewport size), not on zoom.
+	// Anchors are expensive (project every outline + polylabel) and depend only on the
+	// projection (viewport size) and features, never on zoom/pan. `ctx` is a new object on
+	// every zoom frame, so memoise by identity instead of relying on reactivity.
+	let anchorCache: {
+		features: MapContext['features'] | null;
+		projection: MapContext['projection'] | null;
+		value: Map<string, Anchor>;
+	} = { features: null, projection: null, value: new Map() };
+
 	const anchors = $derived.by(() => {
+		const { features, projection } = ctx;
+		if (anchorCache.features === features && anchorCache.projection === projection) {
+			return anchorCache.value;
+		}
 		const out = new Map<string, Anchor>();
-		for (const f of ctx.features) {
-			const a = computeAnchor(f.id, f, ctx.projection);
+		for (const f of features) {
+			const a = computeAnchor(f.id, f, projection);
 			if (a) out.set(f.id, a);
 		}
+		anchorCache = { features, projection, value: out };
 		return out;
 	});
 
@@ -40,7 +53,8 @@
 		return w;
 	}
 
-	const px = $derived(fontSize(ctx.k));
+	// Whole-pixel steps: text is only re-laid out when the size actually changes, not every frame.
+	const px = $derived(Math.round(fontSize(ctx.k)));
 	const chipGap = 4;
 
 	const items = $derived.by(() => {
@@ -62,23 +76,31 @@
 	);
 </script>
 
-<g class="labels" data-testid="labels" style:font-size={`${px / ctx.k}px`}>
+<!--
+	Each label is counter-scaled with a single transform (translate + scale(1/k)), so its contents
+	are laid out in fixed screen pixels. A zoom/pan frame then changes one attribute per visible
+	label instead of font sizes, offsets and chip geometry, which keeps text layout off the
+	per-frame path. Hidden labels keep a zoom-independent transform so they cost nothing per frame.
+-->
+<g class="labels" data-testid="labels" style:font-size={`${px}px`}>
 	{#each items as it (it.iso)}
 		{@const l = it.label}
-		{@const s = 1 / ctx.k}
+		{@const shown = visible.has(it.iso)}
 		{@const totalW = it.textW + (it.chipW ? chipGap + it.chipW : 0)}
 		<g
 			class="label"
-			class:hidden={!visible.has(it.iso)}
+			class:hidden={!shown}
 			class:na={l.na}
 			class:fallback={l.nativeFallback}
 			data-iso={it.iso}
-			data-visible={visible.has(it.iso) ? 'true' : 'false'}
-			transform={`translate(${it.anchor.x},${it.anchor.y})`}
+			data-visible={shown ? 'true' : 'false'}
+			transform={shown
+				? `translate(${it.anchor.x},${it.anchor.y}) scale(${1 / ctx.k})`
+				: `translate(${it.anchor.x},${it.anchor.y})`}
 		>
 			<text
 				class="word"
-				x={((-totalW / 2 + it.textW / 2) * s).toFixed(3)}
+				x={(-totalW / 2 + it.textW / 2).toFixed(2)}
 				y="0"
 				dy="0.35em"
 				text-anchor="middle"
@@ -93,19 +115,17 @@
 			{#if l.more}
 				<g
 					class="chip"
-					transform={`translate(${((totalW / 2 - it.chipW / 2) * s).toFixed(3)},0)`}
+					transform={`translate(${(totalW / 2 - it.chipW / 2).toFixed(2)},0)`}
 					data-testid={`chip-${it.iso}`}
 				>
 					<rect
-						x={(-it.chipW / 2) * s}
-						y={-px * 0.55 * s}
-						width={it.chipW * s}
-						height={px * 1.1 * s}
-						rx={px * 0.55 * s}
+						x={-it.chipW / 2}
+						y={-px * 0.55}
+						width={it.chipW}
+						height={px * 1.1}
+						rx={px * 0.55}
 					/>
-					<text text-anchor="middle" dy="0.35em" style:font-size={`${(px * 0.8) / ctx.k}px`}>
-						+{l.more}
-					</text>
+					<text text-anchor="middle" dy="0.35em" style:font-size={`${px * 0.8}px`}>+{l.more}</text>
 				</g>
 			{/if}
 		</g>
@@ -126,7 +146,6 @@
 		stroke-width: 3px;
 		stroke-linejoin: round;
 		paint-order: stroke;
-		vector-effect: non-scaling-stroke;
 	}
 	.na .word {
 		fill: var(--label-na);
