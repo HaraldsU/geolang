@@ -49,6 +49,8 @@
 	let loadError = $state<string | null>(null);
 	let zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | null = null;
 	let userMoved = false;
+	let pendingTransform: ZoomTransform | null = null;
+	let frame: number | null = null;
 
 	const projection = $derived.by(() => {
 		const p = geoEqualEarth();
@@ -149,8 +151,15 @@
 			.scaleExtent([1, maxZoom])
 			.on('zoom', (event: { transform: ZoomTransform; sourceEvent: Event | null }) => {
 				if (event.sourceEvent) userMoved = true;
-				const t = event.transform;
-				transform = { k: t.k, x: t.x, y: t.y };
+				// Trackpads/fast wheels fire several events per frame. Updating the DOM for each
+				// one makes d3's next getScreenCTM() force a full layout, so coalesce to one
+				// update per animation frame.
+				pendingTransform = event.transform;
+				frame ??= requestAnimationFrame(() => {
+					frame = null;
+					const t = pendingTransform!;
+					transform = { k: t.k, x: t.x, y: t.y };
+				});
 			});
 		select(svg).call(zoomBehavior);
 		applyExtent();
@@ -173,6 +182,7 @@
 			});
 
 		return () => {
+			if (frame !== null) cancelAnimationFrame(frame);
 			controller.abort();
 			ro.disconnect();
 			select(svg).on('.zoom', null);
@@ -230,11 +240,16 @@
 					></path>
 				{/each}
 			</g>
-			{#if overlay && features.length}
-				{@render overlay(ctx)}
-			{/if}
 		</g>
 	</svg>
+	<!--
+		Overlays (labels) live outside the map <svg>: anything inside the zoomed group is re-laid
+		out by the browser on every zoom frame, and SVG text layout is expensive. The overlay is
+		drawn in screen coordinates and follows gestures with a compositor-only CSS transform.
+	-->
+	{#if overlay && features.length}
+		{@render overlay(ctx)}
+	{/if}
 	{#if loadError}
 		<p class="error" role="alert">Could not load the map ({loadError}).</p>
 	{/if}

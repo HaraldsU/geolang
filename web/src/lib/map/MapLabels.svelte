@@ -53,8 +53,51 @@
 		return w;
 	}
 
-	// Whole-pixel steps: text is only re-laid out when the size actually changes, not every frame.
-	const px = $derived(Math.round(fontSize(ctx.k)));
+	/**
+	 * Zoom/pan state the labels are laid out for. It follows the map only once a gesture has
+	 * settled: while the user is zooming, the label DOM is left untouched and simply moves and
+	 * scales with the map layer. Mutating ~240 label elements per frame made every pointer read
+	 * by d3-zoom (getScreenCTM) force an expensive style/layout pass, which caused zoom lag.
+	 */
+	const SETTLE_MS = 150;
+	/** Tests can lengthen the delay (window.__geolangSettleMs) to observe a gesture deterministically. */
+	const settleMs = () =>
+		(globalThis as { __geolangSettleMs?: number }).__geolangSettleMs ?? SETTLE_MS;
+	let layout = $state<{ k: number; x: number; y: number; width: number; height: number } | null>(
+		null
+	);
+	let settleTimer: ReturnType<typeof setTimeout> | undefined;
+
+	$effect(() => {
+		const next = { k: ctx.k, x: ctx.x, y: ctx.y, width: ctx.width, height: ctx.height };
+		clearTimeout(settleTimer);
+		if (!layout || layout.width !== next.width || layout.height !== next.height) {
+			layout = next; // first render or resize: lay out immediately
+		} else if (layout.k !== next.k || layout.x !== next.x || layout.y !== next.y) {
+			settleTimer = setTimeout(() => (layout = next), settleMs());
+		}
+	});
+	$effect(() => () => clearTimeout(settleTimer));
+
+	const lt = $derived(
+		layout ?? { k: ctx.k, x: ctx.x, y: ctx.y, width: ctx.width, height: ctx.height }
+	);
+
+	// Maps the settled view onto the live one: screen point s -> (s - lt.t) * r + ctx.t
+	const gestureTransform = $derived.by(() => {
+		const r = ctx.k / lt.k;
+		const dx = ctx.x - lt.x * r;
+		const dy = ctx.y - lt.y * r;
+		if (Math.abs(r - 1) < 1e-6 && Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return 'none';
+		return `translate(${dx}px, ${dy}px) scale(${r})`;
+	});
+
+	// Large in-gesture scale changes would show stretched, blurry text: fade the layer out until
+	// the labels are re-laid out at the new zoom (opacity is compositor-only, so it's free).
+	const gestureFaded = $derived(Math.abs(Math.log2(ctx.k / lt.k)) > 0.5);
+
+	// Whole-pixel steps: text is only re-laid out when the size actually changes.
+	const px = $derived(Math.round(fontSize(lt.k)));
 	const chipGap = 4;
 
 	const items = $derived.by(() => {
@@ -72,69 +115,100 @@
 	});
 
 	const visible = $derived(
-		placeLabels(items, { k: ctx.k, x: ctx.x, y: ctx.y }, { width: ctx.width, height: ctx.height })
+		placeLabels(items, { k: lt.k, x: lt.x, y: lt.y }, { width: lt.width, height: lt.height })
 	);
 </script>
 
 <!--
-	Each label is counter-scaled with a single transform (translate + scale(1/k)), so its contents
-	are laid out in fixed screen pixels. A zoom/pan frame then changes one attribute per visible
-	label instead of font sizes, offsets and chip geometry, which keeps text layout off the
-	per-frame path. Hidden labels keep a zoom-independent transform so they cost nothing per frame.
+	Labels are laid out in screen pixels for the settled zoom state `lt`. While a gesture is in
+	progress the whole layer is moved/scaled with a CSS transform (GPU-composited, no layout),
+	mapping the settled view onto the live one; it is re-laid out once the gesture settles.
 -->
-<g class="labels" data-testid="labels" style:font-size={`${px}px`}>
-	{#each items as it (it.iso)}
-		{@const l = it.label}
-		{@const shown = visible.has(it.iso)}
-		{@const totalW = it.textW + (it.chipW ? chipGap + it.chipW : 0)}
-		<g
-			class="label"
-			class:hidden={!shown}
-			class:na={l.na}
-			class:fallback={l.nativeFallback}
-			data-iso={it.iso}
-			data-visible={shown ? 'true' : 'false'}
-			transform={shown
-				? `translate(${it.anchor.x},${it.anchor.y}) scale(${1 / ctx.k})`
-				: `translate(${it.anchor.x},${it.anchor.y})`}
-		>
-			<text
-				class="word"
-				x={(-totalW / 2 + it.textW / 2).toFixed(2)}
-				y="0"
-				dy="0.35em"
-				text-anchor="middle"
-				direction={l.shown?.dir ?? 'ltr'}
-				unicode-bidi="embed"
-				lang={l.shown?.code}
-				style:font-family={fontStack(l.shown?.font ?? 'Noto Sans')}
-				data-testid={`label-${it.iso}`}
+<div
+	class="label-layer"
+	class:faded={gestureFaded}
+	style:transform={gestureTransform}
+	data-testid="label-layer"
+>
+	<svg
+		class="labels"
+		data-testid="labels"
+		data-layout-k={lt.k.toFixed(3)}
+		width={lt.width}
+		height={lt.height}
+		style:font-size={`${px}px`}
+		aria-hidden="true"
+	>
+		{#each items as it (it.iso)}
+			{@const l = it.label}
+			{@const shown = visible.has(it.iso)}
+			{@const totalW = it.textW + (it.chipW ? chipGap + it.chipW : 0)}
+			<g
+				class="label"
+				class:hidden={!shown}
+				class:na={l.na}
+				class:fallback={l.nativeFallback}
+				data-iso={it.iso}
+				data-visible={shown ? 'true' : 'false'}
+				transform={`translate(${(it.anchor.x * lt.k + lt.x).toFixed(1)},${(it.anchor.y * lt.k + lt.y).toFixed(1)})`}
 			>
-				{l.text}
-			</text>
-			{#if l.more}
-				<g
-					class="chip"
-					transform={`translate(${(totalW / 2 - it.chipW / 2).toFixed(2)},0)`}
-					data-testid={`chip-${it.iso}`}
+				<text
+					class="word"
+					x={(-totalW / 2 + it.textW / 2).toFixed(2)}
+					y="0"
+					dy="0.35em"
+					text-anchor="middle"
+					direction={l.shown?.dir ?? 'ltr'}
+					unicode-bidi="embed"
+					lang={l.shown?.code}
+					style:font-family={fontStack(l.shown?.font ?? 'Noto Sans')}
+					data-testid={`label-${it.iso}`}
 				>
-					<rect
-						x={-it.chipW / 2}
-						y={-px * 0.55}
-						width={it.chipW}
-						height={px * 1.1}
-						rx={px * 0.55}
-					/>
-					<text text-anchor="middle" dy="0.35em" style:font-size={`${px * 0.8}px`}>+{l.more}</text>
-				</g>
-			{/if}
-		</g>
-	{/each}
-</g>
+					{l.text}
+				</text>
+				{#if l.more}
+					<g
+						class="chip"
+						transform={`translate(${(totalW / 2 - it.chipW / 2).toFixed(2)},0)`}
+						data-testid={`chip-${it.iso}`}
+					>
+						<rect
+							x={-it.chipW / 2}
+							y={-px * 0.55}
+							width={it.chipW}
+							height={px * 1.1}
+							rx={px * 0.55}
+						/>
+						<text text-anchor="middle" dy="0.35em" style:font-size={`${px * 0.8}px`}>
+							+{l.more}
+						</text>
+					</g>
+				{/if}
+			</g>
+		{/each}
+	</svg>
+</div>
 
 <style>
-	.labels {
+	.label-layer {
+		position: absolute;
+		inset: 0;
+		transform-origin: 0 0;
+		will-change: transform, opacity;
 		pointer-events: none;
+		transition: opacity 120ms ease;
+	}
+	.label-layer.faded {
+		opacity: 0;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.label-layer {
+			transition: none;
+		}
+	}
+	.labels {
+		display: block;
+		overflow: visible;
 		font-weight: 600;
 	}
 	.label.hidden {
