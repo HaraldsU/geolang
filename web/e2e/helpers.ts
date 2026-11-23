@@ -26,7 +26,8 @@ export async function useFixtureData(page: Page) {
 		const rel = new URL(route.request().url()).pathname.replace(/^\/data\//, '');
 		try {
 			const body = await readFile(new URL(rel, FIXTURE_DIR));
-			await route.fulfill({ body, contentType: 'application/json' });
+			const contentType = rel.endsWith('.woff2') ? 'font/woff2' : 'application/json';
+			await route.fulfill({ body, contentType });
 		} catch {
 			await route.fulfill({ status: 404, body: 'not found' });
 		}

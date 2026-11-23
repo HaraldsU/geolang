@@ -3,7 +3,7 @@ name = "geolang-pipeline"
 version = "0.1.0"
 description = "Offline data pipeline for geolang: official languages, translations, romanization"
 requires-python = ">=3.12"
-dependencies = ["PyICU>=2.13"]
+dependencies = ["PyICU>=2.13", "fonttools[woff]>=4.50"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

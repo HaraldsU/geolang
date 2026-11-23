@@ -1,4 +1,5 @@
 import { bucket, fold, norm } from './text.js';
+import type { FallbackFont } from '#lib/fonts.js';
 
 export interface Manifest {
 	version: string;
@@ -7,6 +8,8 @@ export interface Manifest {
 	concepts: number;
 	source?: string;
 	built?: string;
+	/** fonts for rare Han characters, built by the pipeline's `fonts` step */
+	fallbackFonts?: FallbackFont[];
 }
 
 /** One search hit: a sense-level concept the query word belongs to. */

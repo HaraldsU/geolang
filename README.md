@@ -24,7 +24,7 @@ geolang/
 | Gap filling for nouns | Wikidata item labels (only senses Wiktionary links to an item) | CC0 |
 | Official languages | Unicode CLDR `territoryInfo` (`official` + `de_facto_official`) + `pipeline/overrides.json` | Unicode v3 |
 | Map | Natural Earth 1:50m via `world-atlas` | Public domain |
-| Fonts | Noto (self-hosted via Fontsource) | OFL |
+| Fonts | Noto (self-hosted via Fontsource); subsets of Noto Sans CJK and Plangothic for rare Han characters (`python -m geolang fonts`) | OFL |
 
 Only national-level official languages are used; regional ones (e.g. Catalan in Spain, Tamil in
 India) are excluded. Manual corrections (e.g. South Africa's 11 national languages) live in
@@ -48,11 +48,15 @@ curl -L -o .cache/kaikki/English.jsonl.gz --create-dirs \
   https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz
 .venv/bin/python -m geolang translations   # ~3 min + Wikidata label fetch (cached)
 #   Wikidata rate-limits anonymous clients; set GEOLANG_CONTACT=<url or e-mail> to identify yourself
+.venv/bin/python -m geolang fonts          # fallback font for rare Han characters (needs web/node_modules)
 .venv/bin/python -m geolang coverage       # coverage report for the 1,000 most common words
 ```
 
 Without the full data build the site still runs; searches just find nothing. The E2E tests use a
-small fixture dataset built by the pipeline (`web/e2e/fixtures/data`).
+small fixture dataset built by the pipeline (`web/e2e/fixtures/data`): `translations --input
+tests/fixtures/wiktionary-sample.jsonl --out ../web/e2e/fixtures/data --version vfixture
+--index-shards 8 --concept-shards 8 --min-translations 1 --no-wikidata`, then `fonts --out
+../web/e2e/fixtures/data`.
 
 ## Tests
 

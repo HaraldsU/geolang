@@ -17,6 +17,7 @@
 	import { buildCountryLabels, languageForms } from '#lib/data/country-labels.js';
 	import type { Countries, Languages, ScriptMode } from '#lib/data/types.js';
 	import { reportUrl } from '#lib/data/report.js';
+	import { registerFallbackFonts } from '#lib/fonts.js';
 
 	const POS_NAMES: Record<string, string> = {
 		noun: 'noun',
@@ -166,6 +167,10 @@
 		query = q;
 		ready = true;
 		if (q) runSearch(q, params.get('sense'));
+		lookup
+			.getManifest()
+			.then((m) => registerFallbackFonts(`/data/${m.version}`, m.fallbackFonts))
+			.catch(() => {}); // search reports data errors itself
 
 		Promise.all([
 			fetch('/data/countries.json').then((r) => r.json()),

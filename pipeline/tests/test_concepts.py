@@ -118,3 +118,39 @@ def test_inflected_forms():
     assert concepts.inflected_forms(entry) == ("dogs",)
     go = {"word": "go", "forms": [{"form": "went", "tags": ["past"]}, {"form": "gone", "tags": ["participle", "past"]}]}
     assert concepts.inflected_forms(go) == ("went", "gone")
+
+
+HAN_LANGS = {code: {"script": "Hant"} for code in ("nan", "yue", "hak", "zh-Hant")}
+
+
+def _pick(*translations):
+    return concepts.pick_translations(list(translations), HAN_LANGS, {})
+
+
+def test_bogus_min_nan_roman_is_dropped():
+    t = {"lang": "Chinese", "code": "nan-hbl", "tags": ["Hokkien"], "word": "𡳞鳥 /𡳞鸟", "roman": "zh-min-nan"}
+    assert _pick(t)["nan"] == ("𡳞鳥", None)
+
+
+def test_no_mandarin_pinyin_for_other_chinese_languages():
+    picked = _pick(
+        {"lang": "Chinese", "code": "nan-hbl", "tags": ["Hokkien"], "word": "水"},
+        {"lang": "Cantonese", "code": "yue", "word": "水"},
+        {"lang": "Hakka", "code": "hak", "word": "水"},
+        {"lang": "Mandarin", "code": "cmn", "word": "水"},
+    )
+    assert picked["nan"] == ("水", None)
+    assert picked["yue"] == ("水", None)
+    assert picked["hak"] == ("水", None)
+    assert picked["zh-Hant"] == ("水", "shuǐ")  # Mandarin still gets ICU pinyin
+
+
+def test_real_min_nan_roman_is_kept():
+    t = {"lang": "Chinese", "code": "nan-hbl", "tags": ["Hokkien"], "word": "水", "roman": "tsuí"}
+    assert _pick(t)["nan"] == ("水", "tsuí")
+
+
+def test_hokkien_rare_character_without_bogus_roman(extracted):
+    c = find(extracted, "dick", "penis")
+    assert c.translations["nan"] == ("𡳞鳥", None)  # kaikki's roman is "zh-min-nan"
+    assert c.translations["zh-Hant"] == ("雞巴", "jība")

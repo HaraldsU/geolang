@@ -9,7 +9,7 @@ import json
 import time
 from pathlib import Path
 
-from . import concepts, coverage, languages, shards, wikidata
+from . import concepts, coverage, fonts, languages, shards, wikidata
 from .paths import CACHE_DIR, DATA_OUT
 
 KAIKKI_EN = CACHE_DIR / "kaikki" / "English.jsonl.gz"
@@ -64,6 +64,12 @@ def cmd_coverage(args: argparse.Namespace) -> None:
         raise SystemExit("Coverage check failed:\n  " + "\n  ".join(problems))
 
 
+def cmd_fonts(args: argparse.Namespace) -> None:
+    entries = fonts.build(Path(args.out) if args.out else DATA_OUT)
+    sizes = ", ".join(f"{e['file']} ({e['unicodeRange'].count(',') + 1} ranges)" for e in entries)
+    print(f"{len(entries)} fallback font files: {sizes or 'none needed'}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="geolang")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -79,12 +85,16 @@ def main() -> None:
     tr.add_argument("--no-wikidata", action="store_true", help="skip Wikidata label enrichment")
     cov = sub.add_parser("coverage", help="Report translation coverage for common words")
     cov.add_argument("--words", default=str(coverage.DEFAULT_WORDS))
+    fo = sub.add_parser("fonts", help="Build fallback fonts for Han characters the web fonts lack")
+    fo.add_argument("--out", default="", help="data directory with manifest.json (default: web/static/data)")
     args = parser.parse_args()
 
     if args.cmd == "languages":
         cmd_languages()
     elif args.cmd == "translations":
         cmd_translations(args)
+    elif args.cmd == "fonts":
+        cmd_fonts(args)
     elif args.cmd == "coverage":
         cmd_coverage(args)
 

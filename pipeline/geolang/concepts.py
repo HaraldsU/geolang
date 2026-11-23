@@ -41,21 +41,29 @@ class LangSpec:
     require_tag: str | None = None
     han_part: str | None = None  # 'trad' | 'simp' for "繁 /简" pairs
     latin_partner: str | None = None  # take latin form from this language's pick (sr <- hr)
+    icu_fallback: bool = True  # False where ICU's transliteration would be another language's reading
 
 
 SPECIAL: dict[str, LangSpec] = {
     "zh": LangSpec(frozenset({"zh", "cmn"}), frozenset({"Chinese Mandarin", "Mandarin"}), han_part="simp"),
     "zh-Hant": LangSpec(frozenset({"zh", "cmn"}), frozenset({"Chinese Mandarin", "Mandarin"}), han_part="trad"),
-    "yue": LangSpec(frozenset({"yue", "zh"}), frozenset({"Chinese Cantonese", "Cantonese"}), han_part="trad"),
-    "hak": LangSpec(frozenset({"hak", "zh"}), frozenset({"Hakka Chinese", "Hakka"}), han_part="trad"),
+    # ICU's Han -> Latin gives Mandarin pinyin, which is wrong for these languages.
+    "yue": LangSpec(frozenset({"yue", "zh"}), frozenset({"Chinese Cantonese", "Cantonese"}), han_part="trad",
+                    icu_fallback=False),
+    "hak": LangSpec(frozenset({"hak", "zh"}), frozenset({"Hakka Chinese", "Hakka"}), han_part="trad",
+                    icu_fallback=False),
     "nan": LangSpec(frozenset({"nan", "nan-hbl", "zh"}), frozenset({"Chinese", "Hokkien", "Min Nan"}),
-                    require_tag="Hokkien", han_part="trad"),
+                    require_tag="Hokkien", han_part="trad", icu_fallback=False),
     "sr": LangSpec(frozenset({"sh", "sr"}), frozenset({"Serbo-Croatian", "Serbian"}), latin_partner="hr"),
     "hr": LangSpec(frozenset({"sh", "hr"}), frozenset({"Serbo-Croatian", "Croatian"})),
     "bs": LangSpec(frozenset({"sh", "bs"}), frozenset({"Serbo-Croatian", "Bosnian"})),
     "fil": LangSpec(frozenset({"fil", "tl"}), frozenset({"Filipino", "Tagalog"})),
     "tzm": LangSpec(frozenset({"tzm", "zgh"}), frozenset({"Central Atlas Tamazight", "Standard Moroccan Tamazight"})),
 }
+
+
+# Values kaikki puts in "roman" that are not romanizations (the label of an interwiki link).
+BOGUS_ROMANS = frozenset({"zh-min-nan"})
 
 
 def spec_for(code: str) -> LangSpec:
@@ -183,6 +191,8 @@ def pick_translations(
             if not word or not rom.matches_script(word, script):
                 continue
             roman = t.get("roman")
+            if roman in BOGUS_ROMANS:
+                roman = None
             if roman and ", " in roman and not any(sep in word for sep in ",，、"):
                 roman = roman.split(", ")[0]  # several readings listed: keep the first
             cand = Candidate(word, clean_roman(roman, script) if roman else None, (rank[0], rank[1] * 1000 + order))
@@ -198,10 +208,10 @@ def pick_translations(
             out[code] = (cand.word, None)
             continue
         latin = cand.roman if cand.roman and rom.is_latin(cand.roman) else None
-        partner = spec_for(code).latin_partner
-        if latin is None and partner and partner in best:
-            latin = best[partner].word
-        if latin is None:
+        spec = spec_for(code)
+        if latin is None and spec.latin_partner in best:
+            latin = best[spec.latin_partner].word
+        if latin is None and spec.icu_fallback:
             latin = rom.romanize(cand.word, script)
         out[code] = (cand.word, latin)
     return out

@@ -51,8 +51,14 @@
 			world-atlas.
 		</li>
 		<li>
-			<strong>Fonts</strong>: <a href="https://fonts.google.com/noto" rel="noopener">Noto</a> (SIL Open
-			Font License).
+			<strong>Fonts</strong>: <a href="https://fonts.google.com/noto" rel="noopener">Noto</a>, and
+			for rare Chinese characters
+			<a
+				href="https://github.com/Fitzgerald-Porthmouth-Koenigsegg/Plangothic_Project"
+				rel="noopener"
+			>
+				Plangothic
+			</a> (both SIL Open Font License).
 		</li>
 	</ul>
 	<p class="muted">

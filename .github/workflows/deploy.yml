@@ -102,6 +102,7 @@ jobs:
             pipeline/.cache/kaikki
             pipeline/.cache/wikidata
             pipeline/.cache/cldr
+            pipeline/.cache/fonts
           key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
           restore-keys: |
             sources-${{ steps.month.outputs.key }}-
@@ -129,6 +130,7 @@ jobs:
         run: |
           python -m geolang languages
           python -m geolang translations
+          python -m geolang fonts
           python -m geolang coverage
           python -m pytest -q
 
@@ -142,6 +144,7 @@ jobs:
             pipeline/.cache/kaikki
             pipeline/.cache/wikidata
             pipeline/.cache/cldr
+            pipeline/.cache/fonts
           key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
 
       - name: Save built data
