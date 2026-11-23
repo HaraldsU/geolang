@@ -95,12 +95,25 @@
 		}
 	}
 
+	// Only once a word is shown: the manifest is fetched (and cached) by the search by then, so a
+	// plain page load makes no data request.
+	let fontsRegistered = false;
+	function registerFontsOnce() {
+		if (fontsRegistered) return;
+		fontsRegistered = true;
+		lookup
+			.getManifest()
+			.then((m) => registerFallbackFonts(`/data/${m.version}`, m.fallbackFonts))
+			.catch(() => (fontsRegistered = false));
+	}
+
 	async function chooseSense(id: string, token = ++searchToken) {
 		senseId = id;
 		status = 'loading';
 		try {
 			const c = await lookup.getConcept(id);
 			if (token !== searchToken) return;
+			if (c) registerFontsOnce();
 			concept = c;
 			status = c ? 'done' : 'empty';
 		} catch (e) {
@@ -158,10 +171,6 @@
 		query = q;
 		ready = true;
 		if (q) runSearch(q, params.get('sense'));
-		lookup
-			.getManifest()
-			.then((m) => registerFallbackFonts(`/data/${m.version}`, m.fallbackFonts))
-			.catch(() => {}); // search reports data errors itself
 
 		Promise.all([
 			fetch('/data/countries.json').then((r) => r.json()),
