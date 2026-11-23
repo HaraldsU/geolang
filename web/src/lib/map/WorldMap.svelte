@@ -7,6 +7,16 @@
 	import 'd3-transition';
 	import type { Feature, FeatureCollection, Geometry } from 'geojson';
 	import type { Topology, GeometryCollection } from 'topojson-specification';
+	import {
+		clippedProjection,
+		covers,
+		prepare,
+		renderExtent,
+		simplifiedFeatures,
+		zoomBucket,
+		type CountryTopology,
+		type View
+	} from './lod.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
 
@@ -42,6 +52,12 @@
 
 	let container: HTMLDivElement;
 	let svg: SVGSVGElement;
+	let canvas: HTMLCanvasElement;
+	let dpr = $state(1);
+	let hovered = $state<string | null>(null);
+	/** Data loaded, map sized and the initial view applied. */
+	let ready = $state(false);
+	let colors = $state({ ocean: '', land: '', hover: '', selected: '', stroke: '' });
 	let width = $state(0);
 	let height = $state(0);
 	let features = $state.raw<CountryFeature[]>([]);
@@ -51,6 +67,13 @@
 	let userMoved = false;
 	let pendingTransform: ZoomTransform | null = null;
 	let frame: number | null = null;
+	let simplifiable = $state.raw<CountryTopology | null>(null);
+	/** View the country geometry was last built for (updated when a gesture settles). */
+	let renderView = $state.raw<View | null>(null);
+	let renderTimer: ReturnType<typeof setTimeout> | undefined;
+	const SETTLE_MS = 150;
+	const settleMs = () =>
+		(globalThis as { __geolangSettleMs?: number }).__geolangSettleMs ?? SETTLE_MS;
 
 	const projection = $derived.by(() => {
 		const p = geoEqualEarth();
@@ -71,9 +94,109 @@
 	});
 
 	const path = $derived(geoPath(projection));
-	const shapes = $derived(
-		features.map((f) => ({ id: f.id, name: f.properties.name, d: path(f) ?? '' }))
-	);
+
+	// Level of detail: simplified per 2x zoom bucket and, when zoomed in, clipped to the
+	// area around the viewport (see lod.ts). Full-detail `features` are still used for fitting,
+	// label anchors and anything else that needs exact geometry.
+	let lodCache: { key: string; features: CountryFeature[] } | null = null;
+	const lodFeatures = $derived.by(() => {
+		if (!simplifiable) return features;
+		const key = `${projection.scale()}|${zoomBucket(renderView?.k ?? 1)}`;
+		if (lodCache?.key !== key) {
+			lodCache = {
+				key,
+				features: simplifiedFeatures(simplifiable, projection.scale(), renderView?.k ?? 1)
+			};
+		}
+		return lodCache.features;
+	});
+	const extent = $derived(renderView ? renderExtent(renderView, width, height) : null);
+	const shapes = $derived.by(() => {
+		const draw = geoPath(clippedProjection(projection, extent));
+		return lodFeatures.map((f) => ({ id: f.id, name: f.properties.name, d: draw(f) ?? '' }));
+	});
+
+	// Countries are painted on a canvas, redrawn synchronously on every frame at the exact zoom.
+	// (An SVG is rasterised by the browser, and Firefox does that asynchronously: after a fast
+	// zoom it shows a stretched, blurry bitmap until it catches up.) The SVG paths remain in the
+	// DOM, invisible, for hit testing, hover/selection and accessibility.
+	const paths = $derived.by(() => {
+		const d = new Map(shapes.map((s) => [s.id, s.d]));
+		const one = new Map<string, Path2D>();
+		return {
+			all: new Path2D(shapes.map((s) => s.d).join('')),
+			get(id: string | null): Path2D | null {
+				if (!id || !d.get(id)) return null;
+				let p = one.get(id);
+				if (!p) one.set(id, (p = new Path2D(d.get(id))));
+				return p;
+			}
+		};
+	});
+
+	function draw() {
+		const c = canvas?.getContext('2d');
+		if (!c || !width || !height) return;
+		const { k, x, y } = transform;
+		c.setTransform(1, 0, 0, 1, 0, 0);
+		c.fillStyle = colors.ocean;
+		c.fillRect(0, 0, canvas.width, canvas.height);
+		c.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
+		c.fillStyle = colors.land;
+		c.fill(paths.all);
+		for (const [id, color] of [
+			[hovered, colors.hover],
+			[selected, colors.selected]
+		] as const) {
+			const p = paths.get(id);
+			if (p) {
+				c.fillStyle = color;
+				c.fill(p);
+			}
+		}
+		c.lineWidth = 0.6 / k;
+		c.lineJoin = 'round';
+		c.strokeStyle = colors.stroke;
+		c.stroke(paths.all);
+		canvas.dataset.k = k.toFixed(3); // zoom the last frame was painted at (for tests)
+	}
+
+	$effect(draw);
+
+	function readColors() {
+		const s = getComputedStyle(container);
+		const v = (name: string) => s.getPropertyValue(name).trim();
+		colors = {
+			ocean: v('--ocean'),
+			land: v('--land'),
+			hover: v('--land-hover'),
+			selected: v('--land-selected'),
+			stroke: v('--land-stroke')
+		};
+	}
+
+	function hover(iso: string | null, e: PointerEvent) {
+		if (e.pointerType !== 'mouse') return;
+		hovered = iso;
+		onhover?.(iso, e);
+	}
+
+	/** Rebuild geometry for the current view: now if it no longer covers the screen, else on settle. */
+	function scheduleRender(view: View) {
+		clearTimeout(renderTimer);
+		const stale =
+			!renderView || !covers(extent, view, width, height) || (renderView.k >= 4 && view.k < 4); // leaving the clipped range: show the whole world
+		const apply = () => {
+			const changed =
+				!renderView ||
+				zoomBucket(renderView.k) !== zoomBucket(view.k) ||
+				renderExtent(view, width, height) !== null ||
+				renderExtent(renderView, width, height) !== null;
+			if (changed) renderView = view;
+		};
+		if (stale) apply();
+		else renderTimer = setTimeout(apply, settleMs());
+	}
 
 	const ctx = $derived<MapContext>({
 		projection,
@@ -114,6 +237,7 @@
 		const mapH = y1 - y0;
 		if (height < mapH * 1.3) return zoomIdentity;
 		const k = Math.min(4, (height * 0.75) / mapH);
+		if (k <= 1) return zoomIdentity; // never start below the minimum zoom
 		const [px, py] = projection([15, 25]) ?? [width / 2, height / 2];
 		return zoomIdentity
 			.translate(width / 2, height / 2)
@@ -143,9 +267,13 @@
 			const r = entries[0].contentRect;
 			width = Math.round(r.width);
 			height = Math.round(r.height);
+			dpr = window.devicePixelRatio || 1;
 			applyExtent();
 		});
 		ro.observe(container);
+		readColors();
+		const scheme = matchMedia('(prefers-color-scheme: dark)');
+		scheme.addEventListener('change', readColors);
 
 		zoomBehavior = d3zoom<SVGSVGElement, unknown>()
 			.scaleExtent([1, maxZoom])
@@ -159,6 +287,8 @@
 					frame = null;
 					const t = pendingTransform!;
 					transform = { k: t.k, x: t.x, y: t.y };
+					if (features.length && width && height) ready = true;
+					scheduleRender(transform);
 				});
 			});
 		select(svg).call(zoomBehavior);
@@ -176,6 +306,7 @@
 					{ name: string }
 				>;
 				features = fc.features as CountryFeature[];
+				simplifiable = prepare(topo as CountryTopology);
 			})
 			.catch((e: Error) => {
 				if (e.name !== 'AbortError') loadError = e.message;
@@ -183,8 +314,10 @@
 
 		return () => {
 			if (frame !== null) cancelAnimationFrame(frame);
+			clearTimeout(renderTimer);
 			controller.abort();
 			ro.disconnect();
+			scheme.removeEventListener('change', readColors);
 			select(svg).on('.zoom', null);
 		};
 	});
@@ -196,6 +329,13 @@
 </script>
 
 <div class="map" bind:this={container} data-testid="map-container">
+	<canvas
+		bind:this={canvas}
+		width={Math.round(width * dpr)}
+		height={Math.round(height * dpr)}
+		data-testid="map-canvas"
+		aria-hidden="true"
+	></canvas>
 	<svg
 		bind:this={svg}
 		{width}
@@ -205,7 +345,9 @@
 		aria-label="World map"
 		data-testid="world-map"
 		data-zoom={transform.k.toFixed(3)}
-		data-ready={features.length > 0 ? 'true' : 'false'}
+		data-ready={ready ? 'true' : 'false'}
+		data-lod={zoomBucket(renderView?.k ?? 1)}
+		data-clipped={extent ? 'true' : 'false'}
 	>
 		<rect
 			class="ocean"
@@ -233,9 +375,9 @@
 						d={s.d}
 						data-iso={s.id}
 						onclick={() => choose(s.id)}
-						onpointerenter={(e) => e.pointerType === 'mouse' && onhover?.(s.id, e)}
-						onpointermove={(e) => e.pointerType === 'mouse' && onhover?.(s.id, e)}
-						onpointerleave={(e) => e.pointerType === 'mouse' && onhover?.(null, e)}
+						onpointerenter={(e) => hover(s.id, e)}
+						onpointermove={(e) => hover(s.id, e)}
+						onpointerleave={(e) => hover(null, e)}
 						role="presentation"
 					></path>
 				{/each}
@@ -265,34 +407,31 @@
 		user-select: none;
 		-webkit-user-select: none;
 	}
+	canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	/* Invisible hit-testing layer on top of the canvas (opacity 0 is never painted, but still
+	   receives pointer events). */
 	svg {
+		position: relative;
 		display: block;
 		width: 100%;
 		height: 100%;
 		cursor: grab;
+		opacity: 0;
 	}
 	svg:active {
 		cursor: grabbing;
 	}
-	.ocean {
-		fill: var(--ocean);
+	.ocean,
+	.country {
+		fill: #000;
 	}
 	.country {
-		fill: var(--land);
-		stroke: var(--land-stroke);
-		stroke-width: 0.6px;
-		vector-effect: non-scaling-stroke;
-		stroke-linejoin: round;
-		transition: fill 120ms ease;
 		cursor: pointer;
-	}
-	@media (hover: hover) {
-		.country:hover {
-			fill: var(--land-hover);
-		}
-	}
-	.country.selected {
-		fill: var(--land-selected);
 	}
 	.error {
 		position: absolute;

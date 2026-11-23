@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoReady, layerTransform, zoomLevel } from './helpers';
+import { canvasColorAt, cssColor, gotoReady, layerTransform, zoomLevel } from './helpers';
 
 test.beforeEach(async ({ page }) => {
 	await gotoReady(page);
@@ -55,10 +55,11 @@ test('mouse wheel zooms and dragging pans', async ({ page, isMobile }) => {
 
 test('hovering highlights a country', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'hover is a pointer-device interaction');
-	const brazil = page.locator('path.country[data-iso="BR"]');
-	const base = await brazil.evaluate((el) => getComputedStyle(el).fill);
-	await brazil.hover();
-	await expect.poll(() => brazil.evaluate((el) => getComputedStyle(el).fill)).not.toBe(base);
+	await expect.poll(() => canvasColorAt(page, 'BR')).toBe(await cssColor(page, '--land'));
+	await page.locator('path.country[data-iso="BR"]').hover();
+	await expect.poll(() => canvasColorAt(page, 'BR')).toBe(await cssColor(page, '--land-hover'));
+	await page.mouse.move(2, 2);
+	await expect.poll(() => canvasColorAt(page, 'BR')).toBe(await cssColor(page, '--land'));
 });
 
 test('clicking/tapping a country selects it, again deselects', async ({ page }) => {

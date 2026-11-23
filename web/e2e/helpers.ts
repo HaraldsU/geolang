@@ -50,3 +50,28 @@ export async function selectCountry(page: Page, iso: string) {
 		.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 	await expect(page.getByTestId('country-panel')).toHaveAttribute('data-iso', iso);
 }
+
+/** CSS hex colour (#rrggbb) of a custom property on the map. */
+export async function cssColor(page: Page, name: string) {
+	return page
+		.getByTestId('map-container')
+		.evaluate((el, name) => getComputedStyle(el).getPropertyValue(name).trim(), name);
+}
+
+/**
+ * Colour painted on the map canvas at the centre of a country's (invisible) hit-test path's
+ * bounding box, as #rrggbb. Pick countries whose box centre lies inside them.
+ */
+export async function canvasColorAt(page: Page, iso: string) {
+	return page.evaluate((iso) => {
+		const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="map-canvas"]')!;
+		const p = document.querySelector(`path.country[data-iso="${iso}"]`)!.getBoundingClientRect();
+		const c = canvas.getBoundingClientRect();
+		const sx = canvas.width / c.width;
+		const sy = canvas.height / c.height;
+		const x = Math.round((p.x + p.width / 2 - c.x) * sx);
+		const y = Math.round((p.y + p.height / 2 - c.y) * sy);
+		const [r, g, b] = canvas.getContext('2d')!.getImageData(x, y, 1, 1).data;
+		return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+	}, iso);
+}
