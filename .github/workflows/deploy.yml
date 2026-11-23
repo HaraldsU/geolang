@@ -43,15 +43,20 @@ jobs:
       - name: Month key
         id: month
         run: echo "key=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
-      - name: Cache source dumps & Wikidata labels
-        uses: actions/cache@v4
+      # Restore and save are separate steps so the downloads are cached even when a later step
+      # (e.g. the Cloudflare upload) fails. Keys include the run id because cache entries are
+      # immutable; restore picks the newest entry for this month, then any older one.
+      - name: Restore source dumps & Wikidata labels
+        uses: actions/cache/restore@v4
         with:
           path: |
             pipeline/.cache/kaikki
             pipeline/.cache/wikidata
             pipeline/.cache/cldr
-          key: sources-${{ steps.month.outputs.key }}
-          restore-keys: sources-
+          key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
+          restore-keys: |
+            sources-${{ steps.month.outputs.key }}-
+            sources-
 
       - name: Download Wiktionary dump (kaikki.org)
         working-directory: pipeline
@@ -59,8 +64,10 @@ jobs:
           mkdir -p .cache/kaikki
           # re-download when the cached copy is from a previous month
           if [ ! -f .cache/kaikki/English.jsonl.gz ] || [ "$(date -r .cache/kaikki/English.jsonl.gz +%Y-%m)" != "$(date +%Y-%m)" ]; then
-            curl -fL --retry 3 -A "geolang-pipeline/0.1" -o .cache/kaikki/English.jsonl.gz \
+            # download to a temp name so a failed download never ends up in the cache
+            curl -fL --retry 3 -A "geolang-pipeline/0.1" -o .cache/kaikki/English.jsonl.gz.part \
               https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz
+            mv .cache/kaikki/English.jsonl.gz.part .cache/kaikki/English.jsonl.gz
           fi
 
       - name: Build data
@@ -72,6 +79,18 @@ jobs:
           python -m geolang translations
           python -m geolang coverage
           python -m pytest -q
+
+      # Save even if the data build failed: the Wikidata label cache only ever contains
+      # successful responses, so partial progress is still worth keeping.
+      - name: Save source dumps & Wikidata labels
+        if: always() && hashFiles('pipeline/.cache/kaikki/English.jsonl.gz') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            pipeline/.cache/kaikki
+            pipeline/.cache/wikidata
+            pipeline/.cache/cldr
+          key: sources-${{ steps.month.outputs.key }}-${{ github.run_id }}
 
       - name: Build site
         working-directory: web
