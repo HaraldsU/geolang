@@ -43,6 +43,7 @@
 	let status = $state<'idle' | 'loading' | 'done' | 'empty' | 'error'>('idle');
 	let searchedFor = $state('');
 	let selected = $state<string | null>(null);
+	let panelSlot = $state<HTMLDivElement>();
 	let hovered = $state<string | null>(null);
 	let hoverPos = $state({ x: 0, y: 0 });
 	let ready = false;
@@ -250,6 +251,7 @@
 			bind:this={map}
 			bind:selected
 			highlighted={withWord}
+			coveredBy={() => panelSlot?.getBoundingClientRect()}
 			projectionName={projection}
 			onhover={(iso, e) => {
 				hovered = iso;
@@ -295,7 +297,7 @@
 		</div>
 
 		{#if selectedPanel}
-			<div class="panel-slot">
+			<div class="panel-slot" bind:this={panelSlot}>
 				<CountryPanel
 					{...selectedPanel}
 					mode={script}

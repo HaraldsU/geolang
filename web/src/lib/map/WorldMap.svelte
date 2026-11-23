@@ -1,9 +1,15 @@
 <script lang="ts">
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, tick, type Snippet } from 'svelte';
 	import { geoPath, type GeoProjection } from 'd3-geo';
 	import { feature } from 'topojson-client';
 	import { select } from 'd3-selection';
-	import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from 'd3-zoom';
+	import {
+		zoom as d3zoom,
+		zoomIdentity,
+		zoomTransform,
+		type ZoomBehavior,
+		type ZoomTransform
+	} from 'd3-zoom';
 	import 'd3-transition';
 	import type { Feature, FeatureCollection, Geometry } from 'geojson';
 	import type { Topology, GeometryCollection } from 'topojson-specification';
@@ -20,6 +26,7 @@
 	} from './lod.js';
 	import { borderArcs, type BorderArcs } from './borders.js';
 	import { DEFAULT_PROJECTION, PROJECTIONS, type ProjectionName } from './projections.js';
+	import { focusTransform, freeArea, mainBounds, type Bounds } from './focus.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
 
@@ -44,6 +51,8 @@
 		projectionName?: ProjectionName;
 		overlay?: Snippet<[MapContext]>;
 		onselect?: (iso: string | null) => void;
+		/** what covers part of the map (the country panel): a clicked country is centred beside it */
+		coveredBy?: () => DOMRect | null | undefined;
 		/** pointer (mouse) hover; never fired for touch */
 		onhover?: (iso: string | null, event?: PointerEvent) => void;
 	}
@@ -56,7 +65,8 @@
 		projectionName = DEFAULT_PROJECTION,
 		overlay,
 		onselect,
-		onhover
+		onhover,
+		coveredBy
 	}: Props = $props();
 
 	let container: HTMLDivElement;
@@ -307,6 +317,32 @@
 		if (zoomBehavior && !userMoved) select(svg).call(zoomBehavior.transform, t);
 	});
 
+	/** Centre a country's main body in the uncovered part of the map, zooming in or out if needed. */
+	export function focusCountry(iso: string) {
+		const f = features.find((f) => f.id === iso);
+		if (!f || !zoomBehavior || !width || !height) return;
+		const polygons =
+			f.geometry.type === 'MultiPolygon'
+				? f.geometry.coordinates.map((coordinates) => ({ type: 'Polygon' as const, coordinates }))
+				: [f.geometry];
+		const bounds = mainBounds(
+			polygons.map((g) => ({ bounds: path.bounds(g) as Bounds, area: path.area(g) }))
+		);
+		if (!bounds) return;
+		const box = container.getBoundingClientRect();
+		const cover = coveredBy?.();
+		const free = freeArea(
+			{ x: 0, y: 0, width, height },
+			cover && { x: cover.x - box.x, y: cover.y - box.y, width: cover.width, height: cover.height }
+		);
+		const t = focusTransform(bounds, free, zoomTransform(svg).k, zoomBehavior.scaleExtent());
+		userMoved = true;
+		select(svg)
+			.transition()
+			.duration(500)
+			.call(zoomBehavior.transform, zoomIdentity.translate(t.x, t.y).scale(t.k));
+	}
+
 	export function getZoom() {
 		return transform.k;
 	}
@@ -372,9 +408,12 @@
 		};
 	});
 
-	function choose(iso: string) {
+	async function choose(iso: string) {
 		selected = selected === iso ? null : iso;
 		onselect?.(selected);
+		if (!selected) return;
+		await tick(); // let the country panel appear first, so the country is centred beside it
+		if (selected === iso) focusCountry(iso);
 	}
 </script>
 
