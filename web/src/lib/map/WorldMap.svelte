@@ -76,6 +76,10 @@
 	let hovered = $state<string | null>(null);
 	/** Data loaded, map sized and the initial view applied. */
 	let ready = $state(false);
+	let gestures = 0; // zoom gestures and transitions in progress
+	let moving = $state(false); // exposed as data-moving, so tests can wait for the map to settle
+	/** Update `moving` after the frame that applies the last transform. */
+	const settle = () => requestAnimationFrame(() => (moving = gestures > 0));
 	let colors = $state({
 		ocean: '',
 		land: '',
@@ -337,10 +341,16 @@
 		);
 		const t = focusTransform(bounds, free, zoomTransform(svg).k, zoomBehavior.scaleExtent());
 		userMoved = true;
+		gestures++;
+		moving = true;
 		select(svg)
 			.transition()
 			.duration(500)
-			.call(zoomBehavior.transform, zoomIdentity.translate(t.x, t.y).scale(t.k));
+			.call(zoomBehavior.transform, zoomIdentity.translate(t.x, t.y).scale(t.k))
+			.on('end.focus interrupt.focus cancel.focus', () => {
+				gestures--;
+				settle();
+			});
 	}
 
 	export function getZoom() {
@@ -362,6 +372,14 @@
 
 		zoomBehavior = d3zoom<SVGSVGElement, unknown>()
 			.scaleExtent([1, maxZoom])
+			.on('start', () => {
+				gestures++;
+				moving = true;
+			})
+			.on('end', () => {
+				gestures = Math.max(0, gestures - 1);
+				settle();
+			})
 			.on('zoom', (event: { transform: ZoomTransform; sourceEvent: Event | null }) => {
 				if (event.sourceEvent) userMoved = true;
 				// Trackpads/fast wheels fire several events per frame. Updating the DOM for each
@@ -412,8 +430,10 @@
 		selected = selected === iso ? null : iso;
 		onselect?.(selected);
 		if (!selected) return;
+		moving = true; // from the click on, so nothing sees the map as settled before it moves
 		await tick(); // let the country panel appear first, so the country is centred beside it
 		if (selected === iso) focusCountry(iso);
+		settle();
 	}
 </script>
 
@@ -435,6 +455,7 @@
 		data-testid="world-map"
 		data-zoom={transform.k.toFixed(3)}
 		data-ready={ready ? 'true' : 'false'}
+		data-moving={moving ? 'true' : 'false'}
 		data-projection={projectionName}
 		data-lod={zoomBucket(renderView?.k ?? 1)}
 		data-clipped={extent ? 'true' : 'false'}

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { gotoReady, selectCountry, zoomLevel } from './helpers';
+import { gotoReady, mapSettled, selectCountry, zoomLevel } from './helpers';
 import { freeArea as uncovered } from '../src/lib/map/focus';
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -13,16 +13,7 @@ async function freeArea(page: Page): Promise<Box> {
 
 /** Wait for the map to settle, then the country's on-screen box. */
 async function settledBox(page: Page, iso: string) {
-	let last = '';
-	await expect
-		.poll(async () => {
-			const z = String(await zoomLevel(page));
-			const same = z === last;
-			last = z;
-			return same;
-		})
-		.toBe(true);
-	await page.waitForTimeout(600); // the 500 ms zoom transition
+	await mapSettled(page);
 	return (await page.locator(`path.country[data-iso="${iso}"]`).boundingBox())!;
 }
 
@@ -73,4 +64,21 @@ test('clicking the selected country again deselects it without moving the map', 
 	await expect(page.getByTestId('country-panel')).toHaveCount(0);
 	await settledBox(page, 'CH');
 	expect(await zoomLevel(page)).toBe(zoom);
+});
+
+test('two quick clicks settle on the second country', async ({ page }) => {
+	await gotoReady(page);
+	await page.evaluate(() => {
+		for (const iso of ['FR', 'JP'])
+			document
+				.querySelector(`path.country[data-iso="${iso}"]`)!
+				.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+	});
+	await expect(page.getByTestId('country-panel')).toHaveAttribute('data-iso', 'JP');
+	const box = await settledBox(page, 'JP');
+	const free = await freeArea(page);
+	const [cx, cy] = centre(box);
+	const [fx, fy] = centre(free);
+	expect(Math.abs(cx - fx)).toBeLessThan(free.width * 0.05);
+	expect(Math.abs(cy - fy)).toBeLessThan(free.height * 0.05);
 });

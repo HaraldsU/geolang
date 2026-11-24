@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { canvasColorAt, cssColor, gotoReady, layerTransform, zoomLevel } from './helpers';
+import {
+	canvasColorAt,
+	cssColor,
+	gotoReady,
+	layerTransform,
+	mapSettled,
+	zoomLevel
+} from './helpers';
 
 test.beforeEach(async ({ page }) => {
 	await gotoReady(page);
@@ -67,6 +74,7 @@ test('clicking/tapping a country selects it, again deselects', async ({ page }) 
 	const libya = page.locator('path.country[data-iso="LY"]');
 	await libya.click();
 	await expect(libya).toHaveClass(/selected/);
+	await mapSettled(page); // the map centres Libya first
 	await libya.click();
 	await expect(libya).not.toHaveClass(/selected/);
 });
@@ -75,6 +83,7 @@ test('clicking the ocean clears the selection', async ({ page }) => {
 	const libya = page.locator('path.country[data-iso="LY"]');
 	await libya.click();
 	await expect(libya).toHaveClass(/selected/);
+	await mapSettled(page); // the map centres Libya first
 	// find open sea (depends on the projection and layout): a point where the ocean is on top
 	const sea = await page.locator('rect.ocean').evaluate((ocean) => {
 		const r = ocean.getBoundingClientRect();

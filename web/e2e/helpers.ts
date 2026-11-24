@@ -5,6 +5,11 @@ export async function gotoReady(page: Page, path = '/') {
 	await expect(page.getByTestId('world-map')).toHaveAttribute('data-ready', 'true');
 }
 
+/** Wait until the map has stopped zooming or panning (e.g. after clicking a country). */
+export async function mapSettled(page: Page) {
+	await expect(page.getByTestId('world-map')).toHaveAttribute('data-moving', 'false');
+}
+
 export async function zoomLevel(page: Page) {
 	return Number(await page.getByTestId('world-map').getAttribute('data-zoom'));
 }
