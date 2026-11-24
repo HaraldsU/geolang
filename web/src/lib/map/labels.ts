@@ -268,7 +268,20 @@ export function computeAnchor(
 			bestArea = a;
 		}
 	}
-	const p = centralPole(best);
+	// Tiny countries are a pixel or less across at the base zoom: search them at a precision
+	// relative to their size, or their label room would round down to nothing.
+	let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+	for (const [x, y] of best) {
+		x0 = Math.min(x0, x);
+		y0 = Math.min(y0, y);
+		x1 = Math.max(x1, x);
+		y1 = Math.max(y1, y);
+	}
+	const p = centralPole(
+		best,
+		PLACEMENT_MIN_FRACTION,
+		Math.max(1e-6, Math.min(0.5, Math.min(x1 - x0, y1 - y0) / 50))
+	);
 	return { iso, x: p.x, y: p.y, r: p.distance, area: total };
 }
 

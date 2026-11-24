@@ -25,7 +25,7 @@
 		type View
 	} from './lod.js';
 	import { borderArcs, type BorderArcs } from './borders.js';
-	import { DEFAULT_PROJECTION, PROJECTIONS, type ProjectionName } from './projections.js';
+	import { DEFAULT_PROJECTION, PROJECTIONS, maxZoom, type ProjectionName } from './projections.js';
 	import { focusTransform, freeArea, mainBounds, type Bounds } from './focus.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
@@ -44,7 +44,6 @@
 	interface Props {
 		topologyUrl?: string;
 		selected?: string | null;
-		maxZoom?: number;
 		/** countries painted with the "has a word" tint */
 		highlighted?: ReadonlySet<string> | null;
 		/** map projection; switching it resets the view */
@@ -60,7 +59,6 @@
 	let {
 		topologyUrl = '/world/countries-50m.json',
 		selected = $bindable(null),
-		maxZoom = 40,
 		highlighted = null,
 		projectionName = DEFAULT_PROJECTION,
 		overlay,
@@ -266,9 +264,15 @@
 		height
 	});
 
+	// The zoom limits follow the projection (its fitted size and type).
+	$effect(() => {
+		void projection;
+		applyExtent();
+	});
+
 	function applyExtent() {
 		if (!zoomBehavior || !width || !height) return;
-		zoomBehavior.translateExtent([
+		zoomBehavior.scaleExtent([1, maxZoom(projection)]).translateExtent([
 			[-width * 0.25, -height * 0.25],
 			[width * 1.25, height * 1.25]
 		]);
@@ -371,7 +375,6 @@
 		scheme.addEventListener('change', readColors);
 
 		zoomBehavior = d3zoom<SVGSVGElement, unknown>()
-			.scaleExtent([1, maxZoom])
 			.on('start', () => {
 				gestures++;
 				moving = true;

@@ -64,6 +64,21 @@ describe('computeAnchor', () => {
 		expect(a.area).toBeGreaterThan(0);
 	});
 
+	it('gives a country smaller than a pixel room in proportion to its size', () => {
+		// 0.01° across: about 0.03 px at this scale, yet its word must fit once zoomed in
+		const projection = geoEqualEarth().fitSize([1000, 600], square(0, 0, 40));
+		const tiny = square(10, 10, 0.01);
+		const a = computeAnchor('TI', tiny, projection)!;
+		const [x0, y0] = projection([10, 10.01])!;
+		const [x1, y1] = projection([10.01, 10])!;
+		expect(a.x).toBeGreaterThan(x0);
+		expect(a.x).toBeLessThan(x1);
+		expect(a.y).toBeGreaterThan(y0);
+		expect(a.y).toBeLessThan(y1);
+		// the inscribed circle of a square has a radius of half its side
+		expect(a.r).toBeGreaterThan(((x1 - x0) / 2) * 0.8);
+	});
+
 	it('uses the largest part of a multi-polygon country', () => {
 		const projection = geoEqualEarth();
 		const big = square(0, 0, 20).geometry.coordinates;
