@@ -1,10 +1,14 @@
+<script lang="ts">
+	import { mapUrl } from '#lib/map-url.js';
+</script>
+
 <svelte:head>
 	<title>About geolang</title>
 	<meta name="description" content="How geolang works and where its data comes from." />
 </svelte:head>
 
 <main class="about" data-testid="about">
-	<a class="back" href="/">← Back to the map</a>
+	<a class="back" href={mapUrl()}>← Back to the map</a>
 	<h1>About geolang</h1>
 	<p>
 		Type a word and geolang shows how it is written in the national official language(s) of every

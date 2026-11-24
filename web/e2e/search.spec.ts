@@ -201,3 +201,19 @@ test('the country panel links to a pre-filled report of a wrong translation', as
 	expect(body).toContain('Page: ');
 	expect(body).toContain('q=hello');
 });
+
+for (const back of ['browser back', 'back link'] as const) {
+	test(`the search is kept after visiting the about page (${back})`, async ({ page }) => {
+		await search(page, 'hello');
+		await expect.poll(() => labelText(page, 'FR')).toBe('bonjour');
+		await page.getByTestId('script-native').click();
+		await page.getByRole('link', { name: 'About & sources' }).click();
+		await expect(page.getByTestId('about')).toBeVisible();
+		if (back === 'browser back') await page.goBack();
+		else await page.getByRole('link', { name: '← Back to the map' }).click();
+		await expect(page.getByTestId('search-input')).toHaveValue('hello');
+		await expect(page.getByTestId('status')).toHaveAttribute('data-status', 'done');
+		await expect.poll(() => labelText(page, 'RU')).toBe('здравствуйте');
+		await expect(page).toHaveURL(/\?q=hello&script=native$/);
+	});
+}

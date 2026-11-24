@@ -18,6 +18,7 @@
 	import { buildCountryLabels, languageForms } from '#lib/data/country-labels.js';
 	import type { Countries, Languages, ScriptMode } from '#lib/data/types.js';
 	import { reportUrl } from '#lib/data/report.js';
+	import { rememberMapUrl } from '#lib/map-url.js';
 	import { senseLabel } from '#lib/data/sense-label.js';
 	import { registerFallbackFonts } from '#lib/fonts.js';
 	import {
@@ -170,6 +171,7 @@
 	$effect(() => {
 		const next = `${location.pathname}${shareQuery}`;
 		if (!ready) return;
+		rememberMapUrl(next);
 		if (next !== `${location.pathname}${location.search}`) replaceState(next, {});
 	});
 
