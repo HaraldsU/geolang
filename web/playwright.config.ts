@@ -27,6 +27,8 @@ export default defineConfig({
 				// E2E_PREBUILT: serve the build scripts/test-all.sh has just made instead of building again
 				command: `${process.env.E2E_PREBUILT ? '' : 'npm run build && '}npm run preview -- --port ${PORT} --strictPort`,
 				port: PORT,
+				// as in CI, where it is never built: see hideGeneratedData in vite.config.ts
+				env: { E2E_HIDE_DATA: '1' },
 				reuseExistingServer: !process.env.CI,
 				timeout: 180_000
 			}

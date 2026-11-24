@@ -15,4 +15,13 @@ describe('theme', () => {
 		const html = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
 		expect(html).toContain(`localStorage.getItem('${THEME_KEY}')`);
 	});
+
+	it("keeps SvelteKit's placeholders out of the script (they would be replaced in it)", () => {
+		const html = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
+		for (const placeholder of ['%sveltekit.head%', '%sveltekit.body%']) {
+			expect(html.split(placeholder)).toHaveLength(2);
+		}
+		const script = html.slice(html.indexOf('<script>'), html.indexOf('</script>'));
+		expect(script).not.toContain('%sveltekit.');
+	});
 });

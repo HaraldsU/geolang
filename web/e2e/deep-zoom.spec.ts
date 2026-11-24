@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { gotoReady, mapSettled, search, selectCountry, zoomLevel } from './helpers';
+import { gotoReady, mapSettled, search, selectCountry, useFixtureData, zoomLevel } from './helpers';
 
 /** Wheel-zoom in on a country until its word is shown or the map stops zooming in. */
 async function zoomInOn(page: Page, iso: string) {
@@ -22,6 +22,7 @@ async function zoomInOn(page: Page, iso: string) {
 // Small countries need deep zoom before their word fits, on small screens too.
 for (const iso of ['CY', 'MT', 'VA']) {
 	test(`the word for ${iso} can be shown by zooming in`, async ({ page }) => {
+		await useFixtureData(page);
 		await gotoReady(page);
 		await search(page, 'water');
 		await expect(page.locator(`g.label[data-iso="${iso}"]`)).toHaveCount(1);

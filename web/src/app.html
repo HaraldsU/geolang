@@ -10,7 +10,9 @@
 		<meta name="theme-color" content="#f4f1ea" />
 		<script>
 			// Before the first paint, so a remembered theme never flashes the other one.
-			// Same logic and key as src/lib/theme.svelte.ts.
+			// Same logic and key as src/lib/theme.svelte.ts. It must stay above SvelteKit's head
+			// placeholder: the CSP <meta> SvelteKit puts there (script-src 'self' + hashes of its own
+			// scripts) only applies to what comes after it.
 			(function () {
 				var t = null;
 				try {

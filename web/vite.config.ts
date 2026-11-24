@@ -43,8 +43,30 @@ function cloudflareHeaders(): Plugin {
 	};
 }
 
+/**
+ * E2E runs serve no generated translation data (static/data/manifest.json and v<date>/), even
+ * when it has been built locally: CI never has it (it is gitignored), so a test that needs real
+ * data would pass locally and fail in CI. Tests use the fixture data instead (useFixtureData).
+ */
+function hideGeneratedData(): Plugin {
+	return {
+		name: 'hide-generated-data',
+		configurePreviewServer(server) {
+			if (!process.env.E2E_HIDE_DATA) return;
+			server.middlewares.use((req, res, next) => {
+				if (!/^\/data\/(manifest\.json|v\d[^/]*\/)/.test((req.url ?? '/').split('?')[0])) {
+					return next();
+				}
+				res.statusCode = 404;
+				res.end('not found');
+			});
+		}
+	};
+}
+
 export default defineConfig({
 	plugins: [
+		hideGeneratedData(),
 		cloudflareHeaders(),
 		sveltekit({
 			compilerOptions: {
