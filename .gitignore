@@ -11,3 +11,6 @@ web/blob-report/
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# Benchmark output (npm run bench:pan)
+web/perf/results/

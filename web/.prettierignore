@@ -6,4 +6,5 @@ e2e/fixtures/
 build/
 test-results/
 playwright-report/
+perf/results/
 package-lock.json

@@ -16,6 +16,8 @@
 	import {
 		clippedProjection,
 		covers,
+		CLIP_MARGIN,
+		intersects,
 		prepare,
 		renderExtent,
 		simplifiedLayers,
@@ -25,6 +27,15 @@
 		type View
 	} from './lod.js';
 	import { borderArcs, type BorderArcs } from './borders.js';
+	import { measure } from './perf.js';
+	import {
+		cacheRegion,
+		deviceOffset,
+		regionCovers,
+		splitByTint,
+		worthRecentring,
+		type DeviceRect
+	} from './raster.js';
 	import { DEFAULT_PROJECTION, PROJECTIONS, maxZoom, type ProjectionName } from './projections.js';
 	import { focusTransform, freeArea, mainBounds, type Bounds } from './focus.js';
 	import type { HitDot } from './labels.js';
@@ -101,7 +112,7 @@
 	let pendingTransform: ZoomTransform | null = null;
 	let frame: number | null = null;
 	let simplifiable = $state.raw<CountryTopology | null>(null);
-	let borders = $state.raw<BorderArcs>({ solid: [], dashed: [] });
+	let borders = $state.raw<BorderArcs>({ solid: [], dashed: [], byCountry: new Map() });
 	/** View the country geometry was last built for (updated when a gesture settles). */
 	let renderView = $state.raw<View | null>(null);
 	let renderTimer: ReturnType<typeof setTimeout> | undefined;
@@ -135,7 +146,15 @@
 	// label anchors and anything else that needs exact geometry.
 	let lodCache: { key: string; layers: Layers } | null = null;
 	const lod = $derived.by((): Layers => {
-		if (!simplifiable) return { countries: features, solid: null, dashed: null };
+		if (!simplifiable) {
+			return {
+				countries: features,
+				solid: null,
+				dashed: null,
+				solidOf: () => null,
+				outline: () => null
+			};
+		}
 		const key = `${projection.scale()}|${zoomBucket(renderView?.k ?? 1)}`;
 		if (lodCache?.key !== key) {
 			lodCache = {
@@ -147,75 +166,208 @@
 	});
 	const extent = $derived(renderView ? renderExtent(renderView, width, height) : null);
 	const toPath = $derived(geoPath(clippedProjection(createProjection, projection, extent)));
+	/** Projected bounding box of each country (computed the first time the map is clipped). */
+	const boundsById = $derived(new Map(features.map((f) => [f.id, path.bounds(f)])));
+	/**
+	 * When clipped, the countries near the view: only these are projected (the clipping would
+	 * discard everything else anyway, after projecting every point). Null: all of them.
+	 */
+	const near = $derived.by(() => {
+		const e = extent;
+		if (!e) return null;
+		return new Set(
+			lod.countries
+				.filter((f) => {
+					const b = boundsById.get(f.id);
+					return b && intersects(b, e);
+				})
+				.map((f) => f.id)
+		);
+	});
 	const shapes = $derived(
-		lod.countries.map((f) => ({ id: f.id, name: f.properties.name, d: toPath(f) ?? '' }))
+		lod.countries.map((f) => ({
+			id: f.id,
+			name: f.properties.name,
+			d: !near || near.has(f.id) ? (toPath(f) ?? '') : ''
+		}))
 	);
 	/** Borders and coastlines (solid) and disputed-area outlines (dashed); null before data loads. */
-	const lines = $derived({
-		solid: lod.solid && new Path2D(toPath(lod.solid) ?? ''),
-		dashed: lod.dashed && new Path2D(toPath(lod.dashed) ?? '')
+	const lines = $derived.by(() => {
+		const solid = near ? lod.solidOf(near) : lod.solid;
+		return {
+			solid: solid && new Path2D(toPath(solid) ?? ''),
+			dashed: lod.dashed && new Path2D(toPath(lod.dashed) ?? '')
+		};
 	});
 
-	// Countries are painted on a canvas, redrawn synchronously on every frame at the exact zoom.
-	// (An SVG is rasterised by the browser, and Firefox does that asynchronously: after a fast
-	// zoom it shows a stretched, blurry bitmap until it catches up.) The SVG paths remain in the
-	// DOM, invisible, for hit testing, hover/selection and accessibility.
+	// Countries are painted on a canvas (see paint()). An SVG is rasterised by the browser, and
+	// Firefox does that asynchronously: after a fast zoom it shows a stretched, blurry bitmap
+	// until it catches up. The SVG paths remain in the DOM, invisible, for hit testing,
+	// hover/selection and accessibility.
 	const paths = $derived.by(() => {
 		const d = new Map(shapes.map((s) => [s.id, s.d]));
 		const one = new Map<string, Path2D>();
+		const outlines = new Map<string, Path2D | null>();
+		// plain and tinted countries are disjoint: every pixel of land is filled once
+		const { land, word } = splitByTint(shapes, highlighted);
 		return {
-			all: new Path2D(shapes.map((s) => s.d).join('')),
+			land: new Path2D(land),
+			word: word ? new Path2D(word) : null,
 			get(id: string | null): Path2D | null {
 				if (!id || !d.get(id)) return null;
 				let p = one.get(id);
 				if (!p) one.set(id, (p = new Path2D(d.get(id))));
 				return p;
+			},
+			/** The country's solid borders, to redraw over its hover/selection fill. */
+			outline(id: string): Path2D | null {
+				if (!outlines.has(id)) {
+					const o = lod.outline(id);
+					outlines.set(id, o && new Path2D(toPath(o) ?? ''));
+				}
+				return outlines.get(id)!;
 			}
 		};
 	});
 
-	const highlightPath = $derived.by(() => {
-		if (!highlighted?.size) return null;
-		const d = shapes.filter((s) => highlighted.has(s.id) && s.d).map((s) => s.d);
-		return d.length ? new Path2D(d.join('')) : null;
-	});
+	/**
+	 * Everything the base layer (all countries, without hover/selection) is drawn from: a new
+	 * object whenever any of it changes, so its identity tells whether a cached bitmap is current.
+	 */
+	const base = $derived({ paths, lines, colors, dpr, width, height });
 
-	function paint() {
-		const c = canvas?.getContext('2d');
-		if (!c || !width || !height) return;
-		const { k, x, y } = transform;
+	/** Offscreen bitmap of the base layer around the viewport, reused by pan frames (raster.ts). */
+	let cache: {
+		el: HTMLCanvasElement;
+		region: DeviceRect;
+		k: number;
+		base: typeof base | null;
+	} | null = null;
+	/** Zoom of the previous frame: when unchanged, the user is panning and the cache pays off. */
+	let lastK = NaN;
+	let renders = 0; // full redraws of the base layer (for tests and perf/pan.bench.ts)
+
+	/** Ocean, land, borders: every country outline, the expensive part. */
+	function drawBase(c: CanvasRenderingContext2D, k: number, dx: number, dy: number) {
+		renders++;
+		const { land, word } = base.paths;
 		c.setTransform(1, 0, 0, 1, 0, 0);
 		c.fillStyle = colors.ocean;
-		c.fillRect(0, 0, canvas.width, canvas.height);
-		c.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
+		c.fillRect(0, 0, c.canvas.width, c.canvas.height);
+		c.setTransform(dpr * k, 0, 0, dpr * k, dx, dy);
 		c.fillStyle = colors.land;
-		c.fill(paths.all);
-		if (highlightPath) {
+		c.fill(land);
+		if (word) {
 			c.fillStyle = colors.word;
-			c.fill(highlightPath);
+			c.fill(word);
 		}
+		c.lineWidth = 0.6 / k;
+		c.lineJoin = 'round';
+		c.strokeStyle = colors.stroke;
+		if (lines.solid) c.stroke(lines.solid);
+		else {
+			c.stroke(land);
+			if (word) c.stroke(word);
+		}
+		if (lines.dashed) strokeDashed(c, k, lines.dashed);
+	}
+
+	function strokeDashed(c: CanvasRenderingContext2D, k: number, p: Path2D) {
+		c.strokeStyle = colors.disputed;
+		c.setLineDash([3 / k, 2 / k]);
+		c.stroke(p);
+		c.setLineDash([]);
+	}
+
+	/**
+	 * Hovered and selected countries, over the base layer: their fill, then their borders again,
+	 * clipped to the country so only the half of each line the fill covered is redrawn.
+	 */
+	function drawOverlay(c: CanvasRenderingContext2D, k: number, dx: number, dy: number) {
+		c.setTransform(dpr * k, 0, 0, dpr * k, dx, dy);
 		for (const [id, color] of [
 			[hovered, colors.hover],
 			[selected, colors.selected]
 		] as const) {
 			const p = paths.get(id);
-			if (p) {
-				c.fillStyle = color;
-				c.fill(p);
-			}
+			if (!p || !id) continue;
+			c.fillStyle = color;
+			c.fill(p);
+			c.save();
+			c.clip(p);
+			c.lineWidth = 0.6 / k;
+			c.lineJoin = 'round';
+			c.strokeStyle = colors.stroke;
+			const outline = paths.outline(id);
+			if (outline) c.stroke(outline);
+			if (lines.dashed) strokeDashed(c, k, lines.dashed);
+			c.restore();
 		}
-		c.lineWidth = 0.6 / k;
-		c.lineJoin = 'round';
-		c.strokeStyle = colors.stroke;
-		c.stroke(lines.solid ?? paths.all);
-		if (lines.dashed) {
-			c.strokeStyle = colors.disputed;
-			c.setLineDash([3 / k, 2 / k]);
-			c.stroke(lines.dashed);
-			c.setLineDash([]);
+	}
+
+	/** Render the base layer around `view` into the cache bitmap (null if it would be too big). */
+	function buildCache(view: { k: number; x: number; y: number }) {
+		const region = cacheRegion(view, width, height, dpr, panExtent());
+		if (!region) return (cache = null);
+		const start = performance.now();
+		const el = cache?.el ?? document.createElement('canvas');
+		if (el.width !== region.w) el.width = region.w;
+		if (el.height !== region.h) el.height = region.h;
+		const c = el.getContext('2d');
+		if (!c) return (cache = null);
+		drawBase(c, view.k, -region.x, -region.y);
+		cache = { el, region, k: view.k, base };
+		measure('map:cache', start);
+	}
+
+	let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/**
+	 * While the map is still (between swipes, or after a zoom), rebuild the pan cache around the
+	 * view if it is stale or the view is near its edge, so the next drag never pays for a full
+	 * redraw. Painting right away also makes the browser rasterise it now, not on the next frame.
+	 */
+	function refreshCache() {
+		if (!canvas || !width || !height) return;
+		if (cache?.base === base && cache.k === transform.k) {
+			const fresh = cacheRegion(transform, width, height, dpr, panExtent());
+			if (!fresh || !worthRecentring(cache.region, fresh, canvas.width, canvas.height)) return;
 		}
+		buildCache(transform);
+		lastK = transform.k;
+		paint();
+	}
+
+	/**
+	 * Draw a frame. Zoom frames redraw every outline at the exact zoom (sharp). Pan frames copy
+	 * the cached base layer, which only needs redrawing when the view leaves the cached area.
+	 */
+	function paint() {
+		const c = canvas?.getContext('2d');
+		if (!c || !width || !height) return;
+		const start = performance.now();
+		const { k } = transform;
+		const offset = deviceOffset(transform, dpr);
+		const current = () =>
+			cache?.base === base &&
+			cache.k === k &&
+			regionCovers(cache.region, offset, canvas.width, canvas.height);
+		if (!current() && k === lastK) buildCache(transform);
+		const hit = current();
+		if (hit) {
+			const { el, region } = cache!;
+			c.setTransform(1, 0, 0, 1, 0, 0);
+			c.drawImage(el, region.x + offset[0], region.y + offset[1]);
+		} else {
+			drawBase(c, k, ...offset);
+		}
+		drawOverlay(c, k, ...offset);
+		lastK = k;
 		canvas.dataset.disputed = String(lod.dashed?.geometry.coordinates.length ?? 0);
 		canvas.dataset.k = k.toFixed(3); // zoom the last frame was painted at (for tests)
+		canvas.dataset.renders = String(renders);
+		canvas.dataset.cache = hit ? 'hit' : 'miss';
+		measure('map:paint', start);
 	}
 
 	$effect(paint);
@@ -235,7 +387,8 @@
 	}
 
 	function hover(iso: string | null, e: PointerEvent) {
-		if (e.pointerType !== 'mouse') return;
+		// nothing is hovered while the map moves (a drag crosses many countries)
+		if (e.pointerType !== 'mouse' || gestures > 0) return;
 		hovered = iso;
 		onhover?.(iso, e);
 	}
@@ -249,8 +402,10 @@
 			const changed =
 				!renderView ||
 				zoomBucket(renderView.k) !== zoomBucket(view.k) ||
-				renderExtent(view, width, height) !== null ||
-				renderExtent(renderView, width, height) !== null;
+				(renderExtent(view, width, height) === null) !== (extent === null) ||
+				// clipped: rebuild only once the view has used up half of the margin (rebuilding
+				// projects every outline near the view, too slow to do after every small pan)
+				!covers(extent, view, width, height, CLIP_MARGIN / 2);
 			if (changed) renderView = view;
 		};
 		if (stale) apply();
@@ -274,12 +429,15 @@
 		applyExtent();
 	});
 
+	/** Where the map can be panned (unzoomed map coordinates). */
+	const panExtent = (): [[number, number], [number, number]] => [
+		[-width * 0.25, -height * 0.25],
+		[width * 1.25, height * 1.25]
+	];
+
 	function applyExtent() {
 		if (!zoomBehavior || !width || !height) return;
-		zoomBehavior.scaleExtent([1, maxZoom(projection)]).translateExtent([
-			[-width * 0.25, -height * 0.25],
-			[width * 1.25, height * 1.25]
-		]);
+		zoomBehavior.scaleExtent([1, maxZoom(projection)]).translateExtent(panExtent());
 	}
 
 	export function zoomBy(factor: number) {
@@ -398,8 +556,17 @@
 					frame = null;
 					const t = pendingTransform!;
 					transform = { k: t.k, x: t.x, y: t.y };
+					// the map moved: nothing stays hovered (done here, outside the effect that may
+					// have set the transform, so that effect never depends on `hovered`)
+					if (hovered) {
+						hovered = null;
+						onhover?.(null);
+					}
 					if (features.length && width && height) ready = true;
 					scheduleRender(transform);
+					clearTimeout(idleTimer);
+					// after scheduleRender's geometry update, which would make the cache stale again
+					idleTimer = setTimeout(refreshCache, settleMs() + 50);
 				});
 			});
 		select(svg).call(zoomBehavior);
@@ -427,6 +594,7 @@
 		return () => {
 			if (frame !== null) cancelAnimationFrame(frame);
 			clearTimeout(renderTimer);
+			clearTimeout(idleTimer);
 			controller.abort();
 			ro.disconnect();
 			themeObserver.disconnect();

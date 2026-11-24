@@ -11,6 +11,8 @@ import type { GeoJsonProperties } from 'geojson';
 export interface BorderArcs {
 	solid: number[];
 	dashed: number[];
+	/** Per country (by id): the solid arcs of its outline, to redraw it over a hover/selection fill. */
+	byCountry: Map<string, number[]>;
 }
 
 function collect(arcs: unknown, into: Set<number>): void {
@@ -31,9 +33,18 @@ function arcsOf(object: GeometryObject<GeoJsonProperties> | undefined): Set<numb
 
 export function borderArcs(topology: Topology): BorderArcs {
 	const dashed = arcsOf(topology.objects.disputed);
-	const solid = [...arcsOf(topology.objects.countries)].filter((a) => !dashed.has(a));
+	const solidOf = (ids: Set<number>) =>
+		[...ids].filter((a) => !dashed.has(a)).sort((a, b) => a - b);
+	const countries = topology.objects.countries;
+	const byCountry = new Map<string, number[]>();
+	if (countries?.type === 'GeometryCollection') {
+		for (const g of countries.geometries) {
+			if (g.id !== undefined) byCountry.set(String(g.id), solidOf(arcsOf(g)));
+		}
+	}
 	return {
-		solid: solid.sort((a, b) => a - b),
-		dashed: [...dashed].sort((a, b) => a - b)
+		solid: solidOf(arcsOf(countries)),
+		dashed: [...dashed].sort((a, b) => a - b),
+		byCountry
 	};
 }

@@ -15,6 +15,7 @@
 	} from './labels.js';
 	import type { CountryLabel } from '#lib/data/country-labels.js';
 	import { fontStack } from '#lib/fonts.js';
+	import { measure } from './perf.js';
 
 	interface Props {
 		ctx: MapContext;
@@ -129,10 +130,13 @@
 	});
 
 	const placement = $derived.by(() => {
+		const start = performance.now();
 		const t = { k: lt.k, x: lt.x, y: lt.y };
 		const viewport = { width: lt.width, height: lt.height };
 		const { visible, boxes } = placeLabelBoxes(items, t, viewport);
-		return { visible, dots: placeDots(items, visible, boxes, t, viewport) };
+		const dots = placeDots(items, visible, boxes, t, viewport);
+		measure('labels:layout', start);
+		return { visible, dots };
 	});
 	const visible = $derived(placement.visible);
 	// Countries whose label doesn't fit at this zoom get a dot, so they don't look untranslated.

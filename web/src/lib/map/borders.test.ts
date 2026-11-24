@@ -29,11 +29,21 @@ const tiny = (disputed: boolean): Topology =>
 
 describe('borderArcs', () => {
 	it('dashes the disputed arcs and strokes every other country arc solid, once', () => {
-		expect(borderArcs(tiny(true))).toEqual({ solid: [0, 2], dashed: [1, 3] });
+		expect(borderArcs(tiny(true))).toMatchObject({ solid: [0, 2], dashed: [1, 3] });
 	});
 
 	it('draws everything solid without disputed areas', () => {
-		expect(borderArcs(tiny(false))).toEqual({ solid: [0, 1, 2], dashed: [] });
+		expect(borderArcs(tiny(false))).toMatchObject({ solid: [0, 1, 2], dashed: [] });
+	});
+
+	it("lists each country's solid outline arcs, without the dashed ones", () => {
+		expect(borderArcs(tiny(true)).byCountry).toEqual(
+			new Map([
+				['A', [0]],
+				['B', [2]]
+			])
+		);
+		expect(borderArcs(tiny(false)).byCountry.get('B')).toEqual([1, 2]);
 	});
 
 	it('finds dashed lines in the real map, separate from the solid ones', () => {

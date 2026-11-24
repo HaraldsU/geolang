@@ -27,6 +27,10 @@ export interface Layers {
 	countries: Country[];
 	solid: Feature<MultiLineString> | null;
 	dashed: Feature<MultiLineString> | null;
+	/** The solid lines of only these countries' outlines (when clipped, the ones near the view). */
+	solidOf(ids: ReadonlySet<string>): Feature<MultiLineString> | null;
+	/** One country's solid outline (see BorderArcs.byCountry), at the same detail. */
+	outline(id: string): Feature<MultiLineString> | null;
 }
 
 export interface View {
@@ -85,16 +89,21 @@ export function simplifiedLayers(
 			feature(topo, topo.objects.countries) as FeatureCollection<Geometry, { name: string }>
 		).features as Country[],
 		solid: lines(topo, borders.solid),
-		dashed: lines(topo, borders.dashed)
+		dashed: lines(topo, borders.dashed),
+		solidOf(ids) {
+			const arcs = new Set<number>();
+			for (const id of ids) for (const a of borders.byCountry.get(id) ?? []) arcs.add(a);
+			return lines(
+				topo,
+				[...arcs].sort((a, b) => a - b)
+			);
+		},
+		outline: (id) => lines(topo, borders.byCountry.get(id) ?? [])
 	};
 }
 
 /** Projected (un-zoomed) rectangle to keep when rendering `view`, or null for no clipping. */
-export function renderExtent(
-	view: View,
-	width: number,
-	height: number
-): [[number, number], [number, number]] | null {
+export function renderExtent(view: View, width: number, height: number): Extent | null {
 	if (view.k < CLIP_FROM_ZOOM) return null;
 	const x0 = -view.x / view.k;
 	const y0 = -view.y / view.k;
@@ -106,22 +115,35 @@ export function renderExtent(
 	];
 }
 
-/** Does geometry rendered for `extent` still cover everything visible in `view`? */
+type Extent = [[number, number], [number, number]];
+
+/**
+ * Does geometry rendered for `extent` still cover everything visible in `view`, plus `slack`
+ * viewport sizes on every side?
+ */
 export function covers(
-	extent: [[number, number], [number, number]] | null,
+	extent: Extent | null,
 	view: View,
 	width: number,
-	height: number
+	height: number,
+	slack = 0
 ): boolean {
 	if (!extent) return true;
-	const x0 = -view.x / view.k;
-	const y0 = -view.y / view.k;
+	const w = width / view.k;
+	const h = height / view.k;
+	const x0 = -view.x / view.k - slack * w;
+	const y0 = -view.y / view.k - slack * h;
 	return (
 		x0 >= extent[0][0] &&
 		y0 >= extent[0][1] &&
-		x0 + width / view.k <= extent[1][0] &&
-		y0 + height / view.k <= extent[1][1]
+		x0 + (1 + 2 * slack) * w <= extent[1][0] &&
+		y0 + (1 + 2 * slack) * h <= extent[1][1]
 	);
+}
+
+/** Do two rectangles ([[x0, y0], [x1, y1]]) overlap? */
+export function intersects(a: Extent, b: Extent): boolean {
+	return a[0][0] <= b[1][0] && b[0][0] <= a[1][0] && a[0][1] <= b[1][1] && b[0][1] <= a[1][1];
 }
 
 /** A copy of `base` (made by `create`, the same projection kind), optionally clipped to a projected rectangle. */

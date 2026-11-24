@@ -19,7 +19,8 @@
 		"test": "npm run test:unit && npm run test:e2e",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && npm run check",
-		"test:e2e:docker": "./scripts/e2e-docker.sh"
+		"test:e2e:docker": "./scripts/e2e-docker.sh",
+		"bench:pan": "playwright test --config perf/playwright.config.ts"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.14.0",

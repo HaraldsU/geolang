@@ -8,6 +8,7 @@ import {
 	clippedProjection,
 	covers,
 	detailZoom,
+	intersects,
 	minWeight,
 	prepare,
 	renderExtent,
@@ -84,6 +85,16 @@ describe('simplified geometry', () => {
 		expect(points(deep)).toBeGreaterThan(points(full as never) * 0.9);
 	});
 
+	it("draws only the given countries' borders on request", () => {
+		const layers = simplifiedLayers(pre, projection.scale(), 1, arcs);
+		const all = new Set(layers.countries.map((c) => c.id));
+		expect(layers.solidOf(all)!.geometry.coordinates.length).toBe(arcs.solid.length);
+		const fr = layers.solidOf(new Set(['FR']))!.geometry.coordinates;
+		expect(fr.length).toBe(arcs.byCountry.get('FR')!.length);
+		expect(fr.length).toBeGreaterThan(0);
+		expect(layers.solidOf(new Set())).toBeNull();
+	});
+
 	it('also returns solid border lines and dashed disputed outlines', () => {
 		const { solid, dashed } = simplifiedLayers(pre, projection.scale(), 1, arcs);
 		expect(solid!.geometry.coordinates.length).toBe(arcs.solid.length);
@@ -118,9 +129,49 @@ describe('clipping to the viewport', () => {
 		// panning by half a screen is still covered, a 3x zoom-out is not
 		expect(covers(ext, { ...view, x: view.x + 700 }, 1400, 850)).toBe(true);
 		expect(covers(ext, { k: 4, x: 700 - cx * 4, y: 425 - cy * 4 }, 1400, 850)).toBe(false);
+		// a gesture settling near where the geometry was built needn't rebuild it
+		expect(covers(ext, view, 1400, 850, 0.5)).toBe(true);
+		expect(covers(ext, { ...view, x: view.x + 701 }, 1400, 850, 0.5)).toBe(false);
 		const deep = simplifiedFeatures(16);
 		expect(points(deep, clippedProjection(geoEqualEarth, projection, ext))).toBeLessThan(
 			points(deep) * 0.3
 		);
+	});
+});
+
+describe('intersects', () => {
+	const a: [[number, number], [number, number]] = [
+		[0, 0],
+		[10, 10]
+	];
+
+	it('is true for overlapping or touching rectangles', () => {
+		expect(
+			intersects(a, [
+				[5, 5],
+				[20, 20]
+			])
+		).toBe(true);
+		expect(
+			intersects(a, [
+				[10, 0],
+				[20, 10]
+			])
+		).toBe(true);
+	});
+
+	it('is false for separate ones', () => {
+		expect(
+			intersects(a, [
+				[11, 0],
+				[20, 10]
+			])
+		).toBe(false);
+		expect(
+			intersects(a, [
+				[0, -20],
+				[10, -1]
+			])
+		).toBe(false);
 	});
 });
