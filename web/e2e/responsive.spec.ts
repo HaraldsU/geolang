@@ -82,7 +82,7 @@ test('layout snapshot', async ({ page }) => {
 test('search box is centred in the navbar', async ({ page }, testInfo) => {
 	test.skip(isMobile(testInfo.project.name), 'phones put the search beside the logo');
 	// the device's own width, plus both sides of the breakpoint where the toggles leave the navbar
-	for (const width of [page.viewportSize()!.width, 768, 1099, 1100]) {
+	for (const width of [page.viewportSize()!.width, 768, 1259, 1260]) {
 		await page.setViewportSize({ width, height: page.viewportSize()!.height });
 		const search = (await page.getByTestId('search-input').boundingBox())!;
 		const nav = (await page.getByTestId('navbar').boundingBox())!;

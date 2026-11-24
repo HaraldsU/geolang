@@ -3,14 +3,23 @@
 		value: T;
 		label: string;
 		testid: string;
+		/** SVG path data (24×24 viewBox): shown instead of the label, which becomes its name */
+		icon?: string;
 	}
 
 	let {
 		value = $bindable(),
 		options,
 		label,
-		testid
-	}: { value: T; options: Option[]; label: string; testid: string } = $props();
+		testid,
+		onchange
+	}: {
+		value: T;
+		options: Option[];
+		label: string;
+		testid: string;
+		onchange?: (value: T) => void;
+	} = $props();
 </script>
 
 <div class="toggle" role="radiogroup" aria-label={label} data-testid={testid}>
@@ -20,10 +29,22 @@
 			role="radio"
 			aria-checked={value === o.value}
 			class:active={value === o.value}
-			onclick={() => (value = o.value)}
+			class:icon={o.icon}
+			aria-label={o.icon ? o.label : undefined}
+			title={o.icon ? o.label : undefined}
+			onclick={() => {
+				value = o.value;
+				onchange?.(o.value);
+			}}
 			data-testid={o.testid}
 		>
-			{o.label}
+			{#if o.icon}
+				<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+					<path d={o.icon} />
+				</svg>
+			{:else}
+				{o.label}
+			{/if}
 		</button>
 	{/each}
 </div>
@@ -49,6 +70,19 @@
 		font-size: 0.9rem;
 		white-space: nowrap;
 		cursor: pointer;
+	}
+	button.icon {
+		display: inline-grid;
+		place-items: center;
+		min-width: 44px;
+		padding: 0 10px;
+	}
+	svg {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 	button.active {
 		background: var(--accent);

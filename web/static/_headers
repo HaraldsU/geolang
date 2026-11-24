@@ -1,4 +1,6 @@
 # Cloudflare Pages response headers (also applied by `vite preview`, see vite.config.ts).
+# src/app.html has an inline script that sets the theme before the first paint: a script-src
+# directive added here must allow it (e.g. by its sha256 hash), or a remembered theme flashes.
 /*
   Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
   X-Content-Type-Options: nosniff

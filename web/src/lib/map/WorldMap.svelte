@@ -371,8 +371,9 @@
 		});
 		ro.observe(container);
 		readColors();
-		const scheme = matchMedia('(prefers-color-scheme: dark)');
-		scheme.addEventListener('change', readColors);
+		// the canvas takes its colours from CSS: repaint when the theme (on <html>) changes
+		const themeObserver = new MutationObserver(readColors);
+		themeObserver.observe(document.documentElement, { attributeFilter: ['data-theme'] });
 
 		zoomBehavior = d3zoom<SVGSVGElement, unknown>()
 			.on('start', () => {
@@ -424,7 +425,7 @@
 			clearTimeout(renderTimer);
 			controller.abort();
 			ro.disconnect();
-			scheme.removeEventListener('change', readColors);
+			themeObserver.disconnect();
 			select(svg).on('.zoom', null);
 		};
 	});

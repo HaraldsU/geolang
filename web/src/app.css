@@ -21,31 +21,31 @@
 	--radius: 10px;
 	--nav-h: 60px;
 	--font: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-	color-scheme: light dark;
+	color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--bg: #14171c;
-		--surface: #1e232a;
-		--surface-2: #2a3039;
-		--text: #e8eaed;
-		--text-muted: #a3aab4;
-		--border: #3a414c;
-		--accent: #6ea0ff;
-		--accent-text: #0d1117;
-		--ocean: #0f2233;
-		--land: #2b313a;
-		--land-word: #2c3a50;
-		--land-hover: #5a4a1f;
-		--land-selected: #8a6d1c;
-		--land-stroke: #5b6470;
-		--border-disputed: #8a93a0;
-		--label: #f1f3f5;
-		--label-halo: rgba(20, 23, 28, 0.9);
-		--label-na: #8a919b;
-		--shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
-	}
+/* set on <html> by app.html and theme.svelte.ts: the user's choice, else the system's */
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #14171c;
+	--surface: #1e232a;
+	--surface-2: #2a3039;
+	--text: #e8eaed;
+	--text-muted: #a3aab4;
+	--border: #3a414c;
+	--accent: #6ea0ff;
+	--accent-text: #0d1117;
+	--ocean: #0f2233;
+	--land: #2b313a;
+	--land-word: #2c3a50;
+	--land-hover: #5a4a1f;
+	--land-selected: #8a6d1c;
+	--land-stroke: #5b6470;
+	--border-disputed: #8a93a0;
+	--label: #f1f3f5;
+	--label-halo: rgba(20, 23, 28, 0.9);
+	--label-na: #8a919b;
+	--shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
 }
 
 *,

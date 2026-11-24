@@ -25,6 +25,11 @@
 		parseProjection,
 		type ProjectionName
 	} from '#lib/map/projections.js';
+	import { setTheme, theme } from '#lib/theme.svelte.js';
+
+	const SUN =
+		'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z';
+	const MOON = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z';
 
 	const lookup = createLookup('/data');
 
@@ -242,6 +247,16 @@
 					label: p.label,
 					testid: `projection-${value}`
 				}))}
+			/>
+			<SegmentedToggle
+				value={theme.value}
+				onchange={setTheme}
+				label="Colour theme"
+				testid="theme-toggle"
+				options={[
+					{ value: 'light', label: 'Light', testid: 'theme-light', icon: SUN },
+					{ value: 'dark', label: 'Dark', testid: 'theme-dark', icon: MOON }
+				]}
 			/>
 		</div>
 	</header>
@@ -477,8 +492,8 @@
 	}
 
 	/* too narrow for a centred search beside the toggles: the toggles float over the map,
-	   bottom-left, writing system above projection, and the credits move beside the map controls */
-	@media (max-width: 1099px) {
+	   bottom-left, writing system, projection and theme stacked, and the credits move beside the map controls */
+	@media (max-width: 1259px) {
 		.nav {
 			--brand-w: 6rem;
 			/* both sides reserve the logo's width so the search stays centred (it shrinks instead) */
