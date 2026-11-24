@@ -3,6 +3,7 @@ import {
 	canvasColorAt,
 	cssColor,
 	gotoReady,
+	layerTransform,
 	mapSettled,
 	selectCountry,
 	zoomLevel
@@ -74,21 +75,39 @@ function remember(page: Page) {
 	});
 }
 
-/** Share of canvas pixels that differ (beyond rounding) from the remembered frame. */
-function differingFromRemembered(page: Page) {
+/**
+ * Compare the canvas with the remembered frame shifted by up to 2 device pixels each way:
+ * share of pixels that differ (beyond rounding) at each shift, keyed "dx,dy". Browsers may
+ * anti-alias an offscreen canvas slightly differently, so a misplaced copy shows up as a
+ * better match at a non-zero shift rather than as any difference at all.
+ */
+function shiftedDifferences(page: Page) {
 	return canvas(page).evaluate((c) => {
 		const el = c as HTMLCanvasElement;
-		const now = el.getContext('2d')!.getImageData(0, 0, el.width, el.height).data;
+		const { width: w, height: h } = el;
+		const now = el.getContext('2d')!.getImageData(0, 0, w, h).data;
 		const then = (window as { __frame?: Uint8ClampedArray }).__frame!;
-		let n = 0;
-		for (let i = 0; i < now.length; i += 4) {
-			const d =
-				Math.abs(now[i] - then[i]) +
-				Math.abs(now[i + 1] - then[i + 1]) +
-				Math.abs(now[i + 2] - then[i + 2]);
-			if (d > 6) n++;
+		const out: Record<string, number> = {};
+		for (let dy = -2; dy <= 2; dy++) {
+			for (let dx = -2; dx <= 2; dx++) {
+				let n = 0;
+				let total = 0;
+				for (let y = 2; y < h - 2; y += 2) {
+					for (let x = 2; x < w - 2; x += 2) {
+						const i = (y * w + x) * 4;
+						const j = ((y + dy) * w + x + dx) * 4;
+						const d =
+							Math.abs(now[i] - then[j]) +
+							Math.abs(now[i + 1] - then[j + 1]) +
+							Math.abs(now[i + 2] - then[j + 2]);
+						if (d > 6) n++;
+						total++;
+					}
+				}
+				out[`${dx},${dy}`] = n / total;
+			}
 		}
-		return n / (now.length / 4);
+		return out;
 	});
 }
 
@@ -118,12 +137,20 @@ test('a panned frame is identical to a freshly drawn one', async ({ page }) => {
 	// the last frame of the zoom was drawn from scratch
 	await expect(canvas(page)).toHaveAttribute('data-cache', 'miss');
 	await remember(page);
+	const start = await layerTransform(page);
 	// away and back: the frame is now a copy of the cache, at the same position
-	await drag(page, 70, 40, 5);
-	await drag(page, -70, -40, 5);
+	await drag(page, 40, 25, 5);
+	await drag(page, -40, -25, 5);
 	await mapSettled(page);
+	// not stopped at the edge of the map: back where it started
+	const numbers = (t: string) => t.match(/-?[\d.]+/g)!.map(Number);
+	const end = numbers(await layerTransform(page));
+	numbers(start).forEach((v, i) => expect(end[i]).toBeCloseTo(v, 2));
 	await expect(canvas(page)).toHaveAttribute('data-cache', 'hit');
-	expect(await differingFromRemembered(page)).toBeLessThan(0.001);
+	const diff = await shiftedDifferences(page);
+	const best = Object.entries(diff).sort((a, b) => a[1] - b[1])[0];
+	expect(best[0]).toBe('0,0');
+	expect(diff['0,0']).toBeLessThan(0.02);
 });
 
 test('a selected country stays selected while the map is panned', async ({ page }) => {
