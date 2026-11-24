@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION=$(node -p "require('@playwright/test/package.json').version")
 exec docker run --rm --ipc=host --init \
-	--user "$(id -u):$(id -g)" -e HOME=/tmp -e CI="${CI:-}" \
+	--user "$(id -u):$(id -g)" -e HOME=/tmp -e CI="${CI:-}" -e E2E_PREBUILT="${E2E_PREBUILT:-}" \
 	-v "$PWD:/work" -w /work \
 	"mcr.microsoft.com/playwright:v${VERSION}-noble" \
 	node node_modules/@playwright/test/cli.js test "$@"

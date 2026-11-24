@@ -24,7 +24,8 @@ export default defineConfig({
 	webServer: process.env.BASE_URL
 		? undefined
 		: {
-				command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
+				// E2E_PREBUILT: serve the build scripts/test-all.sh has just made instead of building again
+				command: `${process.env.E2E_PREBUILT ? '' : 'npm run build && '}npm run preview -- --port ${PORT} --strictPort`,
 				port: PORT,
 				reuseExistingServer: !process.env.CI,
 				timeout: 180_000

@@ -69,6 +69,7 @@ tests/fixtures/wiktionary-sample.jsonl --out ../web/e2e/fixtures/data --version 
 | Unit | `cd web && npm run test:unit` | normalisation/hash parity with Python, lookup, label layout, label data |
 | E2E | `cd web && npm run test:e2e` | map, responsive layout, search, toggle, N/A, URL state, fonts/RTL, CSP, a11y |
 | E2E (all browsers in Docker) | `cd web && npm run test:e2e:docker` | same, incl. WebKit (Safari/iPhone/iPad) with CI-identical screenshots |
+| Everything | `web/scripts/test-all.sh` | all of the above (E2E in Docker), with independent steps side by side and one shared build; prints a summary |
 
 Playwright projects: Desktop Chrome, Firefox and Safari, Pixel 7, iPhone 14, iPad. Update the
 screenshot baselines with `npm run test:e2e:docker -- --update-snapshots`.
