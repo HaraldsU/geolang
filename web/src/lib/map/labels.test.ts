@@ -6,6 +6,7 @@ import {
 	borderDistance,
 	centralPole,
 	computeAnchor,
+	dotOutgrowsCountry,
 	PLACEMENT_MIN_FRACTION,
 	fontSize,
 	placeDots,
@@ -244,5 +245,18 @@ describe('centralPole', () => {
 		const a = centralPole(keyhole);
 		const b = centralPole(rotated);
 		expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(0.5);
+	});
+});
+
+describe('dotOutgrowsCountry', () => {
+	// a dot with its halo is a circle of 4.25 px radius: about 56.7 px²
+	it('is true while the country is smaller on screen than its dot', () => {
+		expect(dotOutgrowsCountry(anchor('MT', 0, 0, 1, 10), 1)).toBe(true);
+		expect(dotOutgrowsCountry(anchor('MT', 0, 0, 1, 10), 2.3)).toBe(true);
+	});
+
+	it('is false once zoomed in until the country is larger than its dot', () => {
+		expect(dotOutgrowsCountry(anchor('MT', 0, 0, 1, 10), 2.4)).toBe(false);
+		expect(dotOutgrowsCountry(anchor('FR', 0, 0, 50, 4000), 1)).toBe(false);
 	});
 });

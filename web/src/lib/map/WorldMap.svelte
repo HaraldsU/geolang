@@ -27,6 +27,7 @@
 	import { borderArcs, type BorderArcs } from './borders.js';
 	import { DEFAULT_PROJECTION, PROJECTIONS, maxZoom, type ProjectionName } from './projections.js';
 	import { focusTransform, freeArea, mainBounds, type Bounds } from './focus.js';
+	import type { HitDot } from './labels.js';
 
 	export type CountryFeature = Feature<Geometry, { name: string }> & { id: string };
 
@@ -52,6 +53,8 @@
 		onselect?: (iso: string | null) => void;
 		/** what covers part of the map (the country panel): a clicked country is centred beside it */
 		coveredBy?: () => DOMRect | null | undefined;
+		/** dots drawn in place of countries too small to see: they take the countries' clicks */
+		hitDots?: readonly HitDot[];
 		/** pointer (mouse) hover; never fired for touch */
 		onhover?: (iso: string | null, event?: PointerEvent) => void;
 	}
@@ -64,7 +67,8 @@
 		overlay,
 		onselect,
 		onhover,
-		coveredBy
+		coveredBy,
+		hitDots = []
 	}: Props = $props();
 
 	let container: HTMLDivElement;
@@ -497,6 +501,24 @@
 					></path>
 				{/each}
 			</g>
+			<!-- above the countries: where a dot is drawn, it is the country's target -->
+			<g class="hit-dots">
+				{#each hitDots as d (d.iso)}
+					<circle
+						class="hit-dot"
+						cx={d.x}
+						cy={d.y}
+						r={d.r}
+						data-iso={d.iso}
+						data-testid={`hit-dot-${d.iso}`}
+						onclick={() => choose(d.iso)}
+						onpointerenter={(e) => hover(d.iso, e)}
+						onpointermove={(e) => hover(d.iso, e)}
+						onpointerleave={(e) => hover(null, e)}
+						role="presentation"
+					></circle>
+				{/each}
+			</g>
 		</g>
 	</svg>
 	<!--
@@ -542,12 +564,15 @@
 		cursor: grabbing;
 	}
 	.ocean,
-	.country {
+	.country,
+	.hit-dot {
 		fill: #000;
 	}
-	.country {
+	.country,
+	.hit-dot {
 		cursor: pointer;
 	}
+
 	.error {
 		position: absolute;
 		inset: auto 16px 16px 16px;

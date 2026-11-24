@@ -353,6 +353,26 @@ export function placeLabels(
 
 /** Radius of the marker drawn for a country whose label is hidden, in screen px. */
 export const DOT_RADIUS = 3.5;
+/** Width of the halo drawn around a dot, in screen px. */
+export const DOT_HALO = 1.5;
+/** How far a dot reaches on screen, halo included. */
+export const DOT_OUTER_RADIUS = DOT_RADIUS + DOT_HALO / 2;
+
+/**
+ * Is a country's dot larger on screen than the country itself? Then the dot is what the user
+ * aims at, so it takes clicks and hover for the country (its outline would be a smaller target).
+ */
+export function dotOutgrowsCountry(anchor: Anchor, k: number): boolean {
+	return anchor.area * k * k < Math.PI * DOT_OUTER_RADIUS * DOT_OUTER_RADIUS;
+}
+
+/** A dot that stands in for its country's outline for pointer input, in un-zoomed map units. */
+export interface HitDot {
+	iso: string;
+	x: number;
+	y: number;
+	r: number;
+}
 
 /**
  * Countries whose label is hidden get a small dot instead, so it is clear they have a word.

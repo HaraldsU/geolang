@@ -2,11 +2,15 @@
 	import type { MapContext } from './WorldMap.svelte';
 	import {
 		computeAnchor,
+		DOT_HALO,
+		DOT_OUTER_RADIUS,
 		DOT_RADIUS,
+		dotOutgrowsCountry,
 		fontSize,
 		placeDots,
 		placeLabelBoxes,
 		type Anchor,
+		type HitDot,
 		type LabelItem
 	} from './labels.js';
 	import type { CountryLabel } from '#lib/data/country-labels.js';
@@ -15,8 +19,10 @@
 	interface Props {
 		ctx: MapContext;
 		labels: Map<string, CountryLabel>;
+		/** the dots that are larger than their country: the map lets them take its clicks */
+		onhitdots?: (dots: HitDot[]) => void;
 	}
-	let { ctx, labels }: Props = $props();
+	let { ctx, labels, onhitdots }: Props = $props();
 
 	// Anchors are expensive (project every outline + polylabel) and depend only on the
 	// projection (viewport size) and features, never on zoom/pan. `ctx` is a new object on
@@ -131,6 +137,17 @@
 	const visible = $derived(placement.visible);
 	// Countries whose label doesn't fit at this zoom get a dot, so they don't look untranslated.
 	const dots = $derived(items.filter((it) => placement.dots.has(it.iso)));
+
+	// Sized for the settled zoom, like the dots themselves: during a gesture both scale together.
+	$effect(() => {
+		onhitdots?.(
+			dots
+				.filter((it) => dotOutgrowsCountry(it.anchor, lt.k))
+				.map((it) => ({ iso: it.iso, x: it.anchor.x, y: it.anchor.y, r: DOT_OUTER_RADIUS / lt.k }))
+		);
+	});
+	// Without the labels there are no dots to take clicks.
+	$effect(() => () => onhitdots?.([]));
 </script>
 
 <!--
@@ -160,6 +177,7 @@
 				cx={(it.anchor.x * lt.k + lt.x).toFixed(1)}
 				cy={(it.anchor.y * lt.k + lt.y).toFixed(1)}
 				r={DOT_RADIUS}
+				stroke-width={DOT_HALO}
 				data-iso={it.iso}
 				data-testid={`dot-${it.iso}`}
 			/>
@@ -257,7 +275,6 @@
 	.dot {
 		fill: var(--accent);
 		stroke: var(--label-halo);
-		stroke-width: 1.5px;
 	}
 	.dot.na {
 		fill: none;

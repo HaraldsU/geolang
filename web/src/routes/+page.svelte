@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import WorldMap from '#lib/map/WorldMap.svelte';
 	import MapLabels from '#lib/map/MapLabels.svelte';
+	import type { HitDot } from '#lib/map/labels.js';
 	import MapControls from '#lib/components/MapControls.svelte';
 	import SegmentedToggle from '#lib/components/SegmentedToggle.svelte';
 	import CountryPanel from '#lib/components/CountryPanel.svelte';
@@ -50,6 +51,7 @@
 	let selected = $state<string | null>(null);
 	let panelSlot = $state<HTMLDivElement>();
 	let hovered = $state<string | null>(null);
+	let hitDots = $state.raw<HitDot[]>([]);
 	let hoverPos = $state({ x: 0, y: 0 });
 	let ready = false;
 	let searchToken = 0;
@@ -268,13 +270,14 @@
 			highlighted={withWord}
 			coveredBy={() => panelSlot?.getBoundingClientRect()}
 			projectionName={projection}
+			{hitDots}
 			onhover={(iso, e) => {
 				hovered = iso;
 				if (e) hoverPos = { x: e.clientX, y: e.clientY };
 			}}
 		>
 			{#snippet overlay(ctx)}
-				<MapLabels {ctx} {labels} />
+				<MapLabels {ctx} {labels} onhitdots={(d) => (hitDots = d)} />
 			{/snippet}
 		</WorldMap>
 
