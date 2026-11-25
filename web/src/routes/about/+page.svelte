@@ -27,7 +27,14 @@
 	</p>
 	<p>
 		All data is prepared ahead of time from open dictionaries; nothing you type leaves your browser
-		other than requests for static data files. There are no accounts and no tracking cookies.
+		other than requests for static data files and the analytics described below. There are no
+		accounts and no cookies.
+	</p>
+	<p data-testid="analytics-note">
+		Visits are counted with Cloudflare Web Analytics, which records anonymous page views (such as
+		the country and browser) without cookies or fingerprinting. A page view includes the page
+		address, which holds the current search (<code>?q=…</code>), so searched words can appear in
+		these statistics.
 	</p>
 
 	<h2>Sources &amp; licences</h2>

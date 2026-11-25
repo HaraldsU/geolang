@@ -75,16 +75,18 @@ export default defineConfig({
 			},
 			adapter: adapter({ fallback: undefined, strict: true }),
 			// Hash-based CSP: SvelteKit emits a <meta> policy with hashes of its own inline scripts,
-			// so no 'unsafe-inline' is needed for scripts.
+			// so no 'unsafe-inline' is needed for scripts. The only third party allowed is Cloudflare
+			// Web Analytics (cookieless page views): Cloudflare Pages adds its beacon script to the
+			// HTML when it is enabled for the project, and the beacon reports to cloudflareinsights.com.
 			csp: {
 				mode: 'hash',
 				directives: {
 					'default-src': ['self'],
-					'script-src': ['self'],
+					'script-src': ['self', 'https://static.cloudflareinsights.com'],
 					'style-src': ['self', 'unsafe-inline'],
 					'img-src': ['self', 'data:'],
 					'font-src': ['self'],
-					'connect-src': ['self'],
+					'connect-src': ['self', 'https://cloudflareinsights.com'],
 					'object-src': ['none'],
 					'base-uri': ['self'],
 					'form-action': ['self']
