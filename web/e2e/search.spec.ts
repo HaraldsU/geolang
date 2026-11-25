@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { gotoReady, labelText, search, selectCountry, useFixtureData } from './helpers';
+import {
+	gotoReady,
+	labelText,
+	search,
+	selectCountry,
+	showToggles,
+	useFixtureData
+} from './helpers';
 
 test.beforeEach(async ({ page }) => {
 	await useFixtureData(page);
@@ -28,6 +35,7 @@ test('debounced typing searches without pressing Enter', async ({ page }) => {
 test('toggling to native script switches non-Latin labels only', async ({ page }) => {
 	await search(page, 'hello');
 	await expect.poll(() => labelText(page, 'RU')).toBe('zdravstvujte');
+	await showToggles(page);
 	await page.getByTestId('script-native').click();
 	await expect.poll(() => labelText(page, 'RU')).toBe('здравствуйте');
 	await expect.poll(() => labelText(page, 'CN')).toBe('你好');
@@ -115,6 +123,7 @@ test('meanings found through another language say which language', async ({ page
 test('search state lives in the URL and survives reload', async ({ page }) => {
 	await search(page, 'hello');
 	await expect(page).toHaveURL(/[?&]q=hello/);
+	await showToggles(page);
 	await page.getByTestId('script-native').click();
 	await expect(page).toHaveURL(/script=native/);
 
@@ -206,6 +215,7 @@ for (const back of ['browser back', 'back link'] as const) {
 	test(`the search is kept after visiting the about page (${back})`, async ({ page }) => {
 		await search(page, 'hello');
 		await expect.poll(() => labelText(page, 'FR')).toBe('bonjour');
+		await showToggles(page);
 		await page.getByTestId('script-native').click();
 		await page.getByRole('link', { name: 'About & sources' }).click();
 		await expect(page.getByTestId('about')).toBeVisible();

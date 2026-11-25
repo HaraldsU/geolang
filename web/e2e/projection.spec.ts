@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { gotoReady, labelText, search, useFixtureData, zoomLevel } from './helpers';
+import { gotoReady, labelText, search, showToggles, useFixtureData, zoomLevel } from './helpers';
 
 const map = (page: Page) => page.getByTestId('world-map');
 
@@ -23,6 +23,7 @@ test('Mercator is the default; the toggle switches to Equal Earth and back', asy
 	await expect(page.getByTestId('projection-mercator')).toHaveAttribute('aria-checked', 'true');
 	expect(await greenlandVsAustralia(page)).toBeGreaterThan(1); // Mercator inflates the poles
 
+	await showToggles(page);
 	await page.getByTestId('projection-equal-earth').click();
 	await expect(map(page)).toHaveAttribute('data-projection', 'equal-earth');
 	await expect(page.getByTestId('projection-equal-earth')).toHaveAttribute('aria-checked', 'true');
@@ -56,6 +57,7 @@ test('switching projection resets the view and keeps the labels on their countri
 
 	await search(page, 'hello');
 	await expect.poll(() => labelText(page, 'FR')).toBe('bonjour');
+	await showToggles(page);
 	await page.getByTestId('projection-equal-earth').click();
 	await expect.poll(() => zoomLevel(page)).toBeCloseTo(equalEarthDefault, 2);
 

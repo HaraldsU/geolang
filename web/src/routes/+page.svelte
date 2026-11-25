@@ -32,6 +32,8 @@
 	const SUN =
 		'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z';
 	const MOON = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z';
+	const SLIDERS =
+		'M4 7h8M16 7h4M4 17h4M12 17h8M16 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM12 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z';
 
 	const lookup = createLookup('/data');
 
@@ -43,6 +45,10 @@
 	let script = $state<ScriptMode>('latin');
 	let projection = $state<ProjectionName>(DEFAULT_PROJECTION);
 	let togglesWidth = $state(0); // keeps the search centred: both sides of the navbar get this width
+	/** Phones only: the toggles stay hidden behind the settings button until it is pressed. */
+	let settingsOpen = $state(false);
+	let settingsButton: HTMLButtonElement | undefined = $state();
+	let toggles: HTMLDivElement | undefined = $state();
 	let query = $state('');
 	let refs = $state.raw<ConceptRef[]>([]);
 	let senseId = $state<string | null>(null);
@@ -195,12 +201,25 @@
 			.catch((e) => console.warn('Could not load country data', e));
 
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') selected = null;
+			if (e.key !== 'Escape') return;
+			if (settingsOpen) {
+				settingsOpen = false;
+				if (toggles?.contains(document.activeElement)) settingsButton?.focus();
+			} else selected = null;
+		};
+		// a tap anywhere else (e.g. on the map) closes the settings
+		const onPointerDown = (e: PointerEvent) => {
+			const t = e.target as Node;
+			if (settingsOpen && !toggles?.contains(t) && !settingsButton?.contains(t)) {
+				settingsOpen = false;
+			}
 		};
 		window.addEventListener('keydown', onKey);
+		window.addEventListener('pointerdown', onPointerDown, true);
 		return () => {
 			clearTimeout(debounce);
 			window.removeEventListener('keydown', onKey);
+			window.removeEventListener('pointerdown', onPointerDown, true);
 		};
 	});
 </script>
@@ -232,7 +251,26 @@
 				data-testid="search-input"
 			/>
 		</form>
-		<div class="toggles" bind:clientWidth={togglesWidth}>
+		<button
+			type="button"
+			class="settings-button"
+			aria-label="Display settings"
+			title="Display settings"
+			aria-expanded={settingsOpen}
+			aria-controls="toggles"
+			onclick={() => (settingsOpen = !settingsOpen)}
+			bind:this={settingsButton}
+			data-testid="settings-button"
+		>
+			<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d={SLIDERS} /></svg>
+		</button>
+		<div
+			class="toggles"
+			class:open={settingsOpen}
+			id="toggles"
+			bind:this={toggles}
+			bind:clientWidth={togglesWidth}
+		>
 			<SegmentedToggle
 				bind:value={script}
 				label="Writing system"
@@ -414,6 +452,9 @@
 		gap: 8px;
 		justify-self: end;
 	}
+	.settings-button {
+		display: none;
+	}
 	.stage {
 		position: relative;
 		flex: 1 1 auto;
@@ -538,6 +579,41 @@
 		}
 		.status-slot {
 			top: 8px;
+		}
+		/* the toggles hide behind a settings button, bottom-left, and open above it */
+		.settings-button {
+			position: fixed;
+			left: max(12px, env(safe-area-inset-left));
+			bottom: max(16px, env(safe-area-inset-bottom));
+			z-index: 3;
+			display: grid;
+			place-items: center;
+			width: 44px;
+			height: 44px;
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			background: var(--surface);
+			color: var(--text);
+			box-shadow: var(--shadow);
+			cursor: pointer;
+		}
+		.settings-button[aria-expanded='true'] {
+			background: var(--accent);
+			border-color: var(--accent);
+			color: var(--accent-text);
+		}
+		.settings-button svg {
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 2;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+		.toggles {
+			bottom: calc(max(16px, env(safe-area-inset-bottom)) + 52px);
+		}
+		.toggles:not(.open) {
+			display: none;
 		}
 		.status select {
 			max-width: calc(100vw - 72px);

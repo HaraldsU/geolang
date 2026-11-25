@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { canvasColorAt, cssColor, gotoReady, isMobile } from './helpers';
+import { canvasColorAt, cssColor, gotoReady, isMobile, showToggles } from './helpers';
 
 const theme = (page: Page) => page.evaluate(() => document.documentElement.dataset.theme);
 const themeColor = (page: Page) => page.locator('meta[name="theme-color"]').getAttribute('content');
@@ -22,6 +22,7 @@ test('picking a theme recolours the page and the map, and is remembered', async 
 	await gotoReady(page);
 	const darkLand = await canvasColorAt(page, 'LY');
 
+	await showToggles(page);
 	await page.getByTestId('theme-light').click();
 	expect(await theme(page)).toBe('light');
 	await expect(page.getByTestId('theme-light')).toHaveAttribute('aria-checked', 'true');
@@ -41,6 +42,7 @@ test('picking a theme recolours the page and the map, and is remembered', async 
 	expect(await theme(page)).toBe('light');
 
 	await gotoReady(page);
+	await showToggles(page);
 	await page.getByTestId('theme-dark').click();
 	expect(await theme(page)).toBe('dark');
 	await gotoReady(page);
@@ -61,6 +63,7 @@ test('a remembered theme is applied before the first paint', async ({ page }) =>
 
 test('the theme switch sits right of the projection switch', async ({ page }, testInfo) => {
 	await gotoReady(page);
+	await showToggles(page);
 	const projection = (await page.getByTestId('projection-toggle').boundingBox())!;
 	const toggle = (await page.getByTestId('theme-toggle').boundingBox())!;
 	if (page.viewportSize()!.width >= 1260) {

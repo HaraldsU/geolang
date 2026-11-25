@@ -112,3 +112,12 @@ export async function labelPoint(page: Page, iso: string): Promise<[number, numb
 		] as [number, number];
 	}, iso);
 }
+
+/** On phones the toggles sit behind the settings button: open it (no-op elsewhere). */
+export async function showToggles(page: Page) {
+	const button = page.getByTestId('settings-button');
+	if ((await button.isVisible()) && (await button.getAttribute('aria-expanded')) !== 'true') {
+		await button.click();
+	}
+	await expect(page.getByTestId('script-toggle')).toBeVisible();
+}
