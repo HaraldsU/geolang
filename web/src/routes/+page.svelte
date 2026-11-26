@@ -251,6 +251,11 @@
 	schema={HOME_SCHEMA}
 />
 
+<svelte:head>
+	<!-- Google Search Console ownership check (only needed on the home page) -->
+	<meta name="google-site-verification" content="VOgmt1hJx3jc0kOsdJaEkLVC_HvXWmXWeGczzx2fLzc" />
+</svelte:head>
+
 <div class="app" bind:this={app}>
 	<header
 		class="nav"

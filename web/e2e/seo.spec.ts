@@ -54,6 +54,11 @@ test('the home page has a descriptive title, canonical URL, share tags and struc
 	const types = h.jsonLd.flatMap((d) => d['@graph'].map((n: { '@type': string }) => n['@type']));
 	expect(types).toEqual(['WebSite', 'WebApplication']);
 
+	await expect(page.locator('meta[name="google-site-verification"]')).toHaveAttribute(
+		'content',
+		'VOgmt1hJx3jc0kOsdJaEkLVC_HvXWmXWeGczzx2fLzc'
+	);
+
 	const img = await request.get('/og.png');
 	expect(img.ok()).toBe(true);
 	expect(img.headers()['content-type']).toBe('image/png');
