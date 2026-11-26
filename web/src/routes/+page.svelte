@@ -28,6 +28,26 @@
 		type ProjectionName
 	} from '#lib/map/projections.js';
 	import { setTheme, theme } from '#lib/theme.svelte.js';
+	import Seo from '#lib/components/Seo.svelte';
+	import { absUrl, SITE_NAME } from '#lib/seo.js';
+
+	const HOME_SCHEMA = {
+		'@context': 'https://schema.org',
+		'@graph': [
+			{ '@type': 'WebSite', name: SITE_NAME, url: absUrl('/') },
+			{
+				'@type': 'WebApplication',
+				name: SITE_NAME,
+				url: absUrl('/'),
+				description:
+					'An interactive world map that shows a word in the national official languages of every country.',
+				applicationCategory: 'ReferenceApplication',
+				operatingSystem: 'Any (web browser)',
+				isAccessibleForFree: true,
+				offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+			}
+		]
+	};
 
 	const SUN =
 		'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z';
@@ -224,9 +244,12 @@
 	});
 </script>
 
-<svelte:head>
-	<title>geolang</title>
-</svelte:head>
+<Seo
+	title="geolang: see any word in every country’s language on a world map"
+	description="Type a word such as hello, water or love and see how it is written in the official languages of every country, in Latin script or the native script, on an interactive world map."
+	path="/"
+	schema={HOME_SCHEMA}
+/>
 
 <div class="app" bind:this={app}>
 	<header
@@ -234,6 +257,7 @@
 		data-testid="navbar"
 		style:--side={togglesWidth ? `${togglesWidth}px` : undefined}
 	>
+		<h1 class="visually-hidden">geolang: a word in every country’s official languages</h1>
 		<a class="brand" href="/" aria-label="geolang home">geo<span>lang</span></a>
 		<form class="search" role="search" onsubmit={onSubmit}>
 			<label for="q" class="visually-hidden">Word to translate</label>
@@ -388,6 +412,7 @@
 	</main>
 
 	<footer class="credits">
+		<a href="/words">Common words</a>
 		<a href="/about">About &amp; sources</a>
 	</footer>
 </div>
@@ -527,6 +552,8 @@
 		position: absolute;
 		left: max(12px, env(safe-area-inset-left));
 		bottom: max(8px, env(safe-area-inset-bottom));
+		display: flex;
+		gap: 4px;
 		font-size: 0.75rem;
 		z-index: 1;
 	}

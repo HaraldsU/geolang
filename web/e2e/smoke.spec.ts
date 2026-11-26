@@ -7,7 +7,7 @@ test('page loads with title and no console errors', async ({ page }) => {
 	page.on('pageerror', (e) => errors.push(e.message));
 
 	await gotoReady(page);
-	await expect(page).toHaveTitle('geolang');
+	await expect(page).toHaveTitle(/^geolang: /);
 	await expect(page.getByTestId('navbar')).toBeVisible();
 	expect(errors).toEqual([]);
 });

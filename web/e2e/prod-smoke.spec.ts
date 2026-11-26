@@ -27,4 +27,12 @@ test.describe('production smoke @prod', () => {
 		expect(res.ok()).toBe(true);
 		expect(res.headers()['cache-control']).toContain('immutable');
 	});
+
+	test('word pages are prerendered and listed in the sitemap', async ({ page, request }) => {
+		const xml = await (await request.get('/sitemap.xml')).text();
+		expect(xml.match(/<loc>[^<]*\/word\//g)?.length ?? 0).toBeGreaterThan(500);
+		expect(await (await request.get('/robots.txt')).text()).toContain('/sitemap.xml');
+		await page.goto('/word/hello');
+		await expect(page.getByTestId('country-FR').locator('span[lang="fr"]')).toHaveText('bonjour');
+	});
 });

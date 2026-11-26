@@ -61,3 +61,12 @@ test('keyboard-only flow: search and toggle script', async ({ page, isMobile }) 
 	await expect.poll(() => labelText(page, 'RU')).toBe('здравствуйте');
 	await page.keyboard.press('Escape');
 });
+
+test('word pages have no serious accessibility violations', async ({ page }) => {
+	await page.goto('/word/hello');
+	await expect(page.getByTestId('word-table')).toBeVisible();
+	expect(await seriousViolations(page)).toEqual([]);
+	await page.goto('/words');
+	await expect(page.getByTestId('words-page')).toBeVisible();
+	expect(await seriousViolations(page)).toEqual([]);
+});

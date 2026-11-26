@@ -14,7 +14,8 @@ START=$SECONDS
 pytest_step() { cd "$ROOT/pipeline" && .venv/bin/python -m pytest -q; }
 lint_step() { cd "$ROOT/web" && npm run lint; }
 unit_step() { cd "$ROOT/web" && npm run test:unit; }
-build_step() { cd "$ROOT/web" && npm run build; }
+# E2E build: word pages from the fixture data, as in playwright.config.ts
+build_step() { cd "$ROOT/web" && GEOLANG_DATA_DIR=e2e/fixtures/data npm run build; }
 e2e_step() { cd "$ROOT/web" && E2E_PREBUILT=1 scripts/e2e-docker.sh --reporter=line "$@"; }
 
 # run <name> <step> [args]: log to $LOGS/<name>.log, record "<exit code> <seconds>" in <name>.rc

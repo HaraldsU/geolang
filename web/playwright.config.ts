@@ -28,7 +28,8 @@ export default defineConfig({
 				command: `${process.env.E2E_PREBUILT ? '' : 'npm run build && '}npm run preview -- --port ${PORT} --strictPort`,
 				port: PORT,
 				// as in CI, where it is never built: see hideGeneratedData in vite.config.ts
-				env: { E2E_HIDE_DATA: '1' },
+				// word pages are prerendered from the fixture data, so they are the same everywhere
+				env: { E2E_HIDE_DATA: '1', GEOLANG_DATA_DIR: 'e2e/fixtures/data' },
 				reuseExistingServer: !process.env.CI,
 				timeout: 180_000
 			}

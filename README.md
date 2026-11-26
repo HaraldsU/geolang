@@ -11,6 +11,9 @@ Latin script (romanized) or in the language's own script.
 - Latin or native script, Mercator or Equal Earth projection, light or dark theme
 - Click a country for all its official languages and their forms; missing translations show **N/A**
 - The URL holds the search and settings (`/?q=hello&script=native`), so any view can be shared
+- About 800 common words also have their own page (e.g. [/word/hello](https://geolang.pages.dev/word/hello),
+  all listed at [/words](https://geolang.pages.dev/words)): a plain table of the word by country
+  that search engines can index
 - Works on phones and tablets; no accounts, no cookies
 
 ## How it works
@@ -25,7 +28,11 @@ dictionaries and served as static files:
    about 400 MB in total). This is why a data build has thousands of small files.
 3. In the browser, a search hashes the normalised word, downloads the one small index shard it
    falls into and then one concept shard: a few KB per search instead of a 400 MB dictionary.
-4. The map is drawn on a canvas (with a cached bitmap for smooth panning) under an invisible SVG
+4. At build time, the most common English words (`pipeline/wordlists/top-1000-en.txt` plus
+   `web/src/lib/server/extra-words.txt`) that at least 60% of countries have get a prerendered
+   page, without JavaScript, listed in `sitemap.xml`. The build reads the data from
+   `web/static/data`, or from the folder in `GEOLANG_DATA_DIR` (the E2E tests use the fixture data).
+5. The map is drawn on a canvas (with a cached bitmap for smooth panning) under an invisible SVG
    layer for hit-testing and accessibility; labels are placed so they don't overlap.
 
 ## Accuracy
@@ -118,6 +125,9 @@ The E2E tests use a small fixture dataset built by the pipeline (`web/e2e/fixtur
 
 Playwright projects: Desktop Chrome, Firefox and Safari, Pixel 7, iPhone 14, iPad. Update the
 screenshot baselines with `npm run test:e2e:docker -- --update-snapshots`.
+
+The preview image for shared links (`web/static/og.png`) is rendered from the real data with
+`node scripts/og-image.mjs` while `npm run preview` is running.
 
 ## Privacy and security
 

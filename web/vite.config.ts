@@ -74,6 +74,8 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter({ fallback: undefined, strict: true }),
+			// Without translation data (a fresh checkout) there are no word pages to prerender.
+			prerender: { handleUnseenRoutes: 'ignore' },
 			// Hash-based CSP: SvelteKit emits a <meta> policy with hashes of its own inline scripts,
 			// so no 'unsafe-inline' is needed for scripts. The only third party allowed is Cloudflare
 			// Web Analytics (cookieless page views): Cloudflare Pages adds its beacon script to the

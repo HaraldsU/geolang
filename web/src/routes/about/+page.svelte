@@ -1,11 +1,13 @@
 <script lang="ts">
+	import Seo from '#lib/components/Seo.svelte';
 	import { mapUrl } from '#lib/map-url.js';
 </script>
 
-<svelte:head>
-	<title>About geolang</title>
-	<meta name="description" content="How geolang works and where its data comes from." />
-</svelte:head>
+<Seo
+	title="About geolang: how it works, sources and borders"
+	description="How geolang shows a word in every country’s official languages: where the translations come from (Wiktionary), which languages count, and how disputed borders are drawn."
+	path="/about"
+/>
 
 <main class="about" data-testid="about">
 	<a class="back" href={mapUrl()}>← Back to the map</a>
@@ -19,6 +21,10 @@
 		Countries that have the word are tinted. When a country is too small for its label at the
 		current zoom, a dot marks it instead (a hollow ring means <em>N/A</em>); zoom in or tap the
 		country to see the word.
+	</p>
+	<p>
+		Browse <a href="/words">common words in every country’s language</a>, or search for any word on
+		the map.
 	</p>
 	<p data-testid="accuracy-note">
 		Translations come from Wiktionary, a dictionary written by volunteers, and are shown as listed
